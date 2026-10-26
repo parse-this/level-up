@@ -1,0 +1,89 @@
+<div class="layout">
+  <app-back-rail link="/quests" label="All quests" />
+
+  <div class="content">
+    @if (quest(); as l) {
+      <div class="heading-row">
+        <h2 class="quest-heading">
+          <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{
+            l.closedAt ? 'check_circle' : 'radio_button_unchecked'
+          }}</mat-icon>
+          {{ l.closedAt ? 'Completed quest' : 'Quest' }}
+        </h2>
+        <button matIconButton type="button" (click)="remove()" aria-label="Delete quest">
+          <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+        </button>
+      </div>
+
+      <form [formGroup]="form" class="quest-form" novalidate>
+        <mat-form-field class="title-field">
+          <mat-label>Quest</mat-label>
+          <input matInput formControlName="title" autocomplete="off" />
+          <mat-error>Give it a title.</mat-error>
+        </mat-form-field>
+
+        <div class="field-label" id="horizon-label">When</div>
+        <mat-button-toggle-group
+          class="choices"
+          formControlName="horizon"
+          hideSingleSelectionIndicator
+          aria-labelledby="horizon-label"
+        >
+          @for (h of horizons; track h) {
+            <mat-button-toggle [value]="h">{{ horizonLabels[h] }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+
+        <div class="field-label" id="importance-label">Importance</div>
+        <mat-button-toggle-group
+          class="choices importance"
+          formControlName="importance"
+          hideSingleSelectionIndicator
+          aria-labelledby="importance-label"
+        >
+          @for (i of importances; track i) {
+            <mat-button-toggle [value]="i" [class]="'imp-' + i">
+              @if (importanceIcons[i]) {
+                <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{ importanceIcons[i] }}</mat-icon>
+              }
+              {{ importanceLabels[i] }}
+            </mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+      </form>
+
+      <div class="field-label">Tags</div>
+      <div class="tags">
+        @for (t of l.tagIds; track t) {
+          <span class="tag">
+            {{ tagName(t) }}
+            <button type="button" class="tag-remove" (click)="removeTag(t)" [attr.aria-label]="'Remove tag ' + tagName(t)">
+              <mat-icon fontSet="material-symbols-outlined">close</mat-icon>
+            </button>
+          </span>
+        }
+        <app-tag-picker [selected]="l.tagIds" (selectedChange)="setTags($event)" />
+      </div>
+
+      <div class="field-label">Notes</div>
+      @for (key of notesKey(); track key) {
+        <app-notes-editor [html]="l.notes" (changed)="saveNotes($event)" />
+      }
+
+      <div class="footer">
+        <span class="dates">
+          Captured {{ l.createdAt | date: 'MMM d, y, h:mm a' }}
+          @if (l.closedAt) {
+            · Completed {{ l.closedAt | date: 'MMM d, y, h:mm a' }}
+          }
+        </span>
+        <button matButton="filled" type="button" class="toggle-closed" (click)="toggleClosed()">
+          <mat-icon fontSet="material-symbols-outlined">{{ l.closedAt ? 'undo' : 'check' }}</mat-icon>
+          {{ l.closedAt ? 'Reopen' : 'Complete quest' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty">Quest not found.</p>
+    }
+  </div>
+</div>

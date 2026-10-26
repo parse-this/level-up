@@ -1,0 +1,41 @@
+.section-title {
+  font: var(--mat-sys-title-large);
+  margin: 0 0 12px;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.last-time {
+  margin-bottom: 24px;
+}
+
+.logged {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-primary);
+}
+
+.exercise-list {
+  margin-bottom: 16px;
+}
+
+.exercise-form {
+  display: block;
+  scroll-margin-top: 16px;
+}
+
+.add-exercise {
+  margin-bottom: 8px;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+}

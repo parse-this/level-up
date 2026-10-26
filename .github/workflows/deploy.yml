@@ -1,0 +1,46 @@
+# Test, build and publish to GitHub Pages on every push to main.
+# Site: https://parse-this.github.io/level-up/
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx ng test --watch=false
+      - run: npx ng build --base-href /level-up/
+      # GitHub Pages serves 404.html for unknown paths; serving the app lets deep links
+      # (e.g. /level-up/quests) work on first visit and refresh.
+      - run: cp dist/level-up-tracker/browser/index.html dist/level-up-tracker/browser/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/level-up-tracker/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,146 @@
+.level-card {
+  margin-bottom: 24px;
+}
+
+.level-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.mushroom {
+  width: 56px;
+  height: auto;
+}
+
+.level-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.level {
+  font-size: 20px;
+  color: #21aa52;
+  margin-bottom: 8px;
+}
+
+.xp-bar {
+  height: 10px;
+  border-radius: 5px;
+  --mat-progress-bar-active-indicator-color: #21aa52;
+  --mat-progress-bar-track-color: var(--mat-sys-surface-container-highest);
+  --mat-progress-bar-active-indicator-height: 10px;
+  --mat-progress-bar-track-height: 10px;
+}
+
+.to-next {
+  margin-top: 6px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  font: var(--mat-sys-title-large);
+}
+
+.stat-label {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+.section-title {
+  font: var(--mat-sys-title-large);
+  margin: 0 0 12px;
+}
+
+.breakdown {
+  width: 100%;
+  margin-bottom: 24px;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font: var(--mat-sys-body-medium);
+  }
+
+  th,
+  td {
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  .detail {
+    color: var(--mat-sys-on-surface-variant);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .xp {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gain {
+    color: #21aa52;
+  }
+
+  .loss {
+    color: #ff8a65;
+  }
+
+  tfoot th,
+  tfoot td {
+    font: var(--mat-sys-title-medium);
+    border-bottom: 0;
+  }
+
+  .empty {
+    color: var(--mat-sys-on-surface-variant);
+    text-align: center;
+  }
+}
+
+.days {
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: 7.5em 1fr auto;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &.missed .day-what {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.day-date {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.day-total {
+  font-variant-numeric: tabular-nums;
+}
+
+.rules {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--mat-sys-on-surface-variant);
+
+  li {
+    margin-bottom: 6px;
+  }
+}

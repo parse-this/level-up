@@ -1,0 +1,120 @@
+<mat-card appearance="outlined" class="details-card">
+  <mat-card-content>
+    <form class="details" [formGroup]="details" novalidate>
+      <mat-form-field class="date-field">
+        <mat-label>Date</mat-label>
+        <input matInput type="date" formControlName="date" />
+        <mat-error>Date is required.</mat-error>
+      </mat-form-field>
+      <mat-form-field class="grow">
+        <mat-label>Workout name</mat-label>
+        <input
+          matInput
+          formControlName="name"
+          placeholder="e.g. Push day"
+          autocomplete="off"
+          [matAutocomplete]="workoutAuto"
+        />
+        <mat-autocomplete #workoutAuto="matAutocomplete" class="workout-suggestions">
+          @for (n of nameSuggestions(); track n) {
+            <mat-option [value]="n">{{ n }}</mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+@if (lastWorkout(); as last) {
+  <mat-expansion-panel class="last-time" [expanded]="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title>Last {{ last.name }}</mat-panel-title>
+      <mat-panel-description>
+        {{ last.date | date: 'EEE, MMM d' }} · {{ last.exercises.length }}
+        {{ last.exercises.length === 1 ? 'exercise' : 'exercises' }}
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+    <div class="card-list">
+      @for (e of last.exercises; track e.id) {
+        <app-exercise-card class="last-exercise" [exercise]="e">
+          <div actions>
+            @if (isLogged(e.name)) {
+              <span class="logged">
+                <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">check_circle</mat-icon>
+                Logged
+              </span>
+            } @else {
+              <button
+                matIconButton
+                type="button"
+                class="start"
+                [disabled]="isStarted(e.name)"
+                (click)="newDraft(e.name)"
+                [attr.aria-label]="'Start ' + e.name"
+              >
+                <mat-icon fontSet="material-symbols-outlined">add_circle</mat-icon>
+              </button>
+            }
+          </div>
+        </app-exercise-card>
+      } @empty {
+        <p class="empty">No exercises were logged that time.</p>
+      }
+    </div>
+  </mat-expansion-panel>
+}
+
+<h3 class="section-title">Exercises</h3>
+<section class="card-list exercise-list" aria-label="Exercises">
+  @for (e of entry().exercises; track e.id) {
+    @if (isEditing(e.id)) {
+      <app-exercise-form
+        class="exercise-form"
+        [exercise]="e"
+        [knownNames]="exerciseNames()"
+        [previous]="latestExercise"
+        (saved)="saveEdit(e.id, $event)"
+        (cancelled)="closeEdit(e.id)"
+      />
+    } @else {
+      <app-exercise-card [exercise]="e">
+        <div actions>
+          <button matIconButton type="button" (click)="edit(e)" [attr.aria-label]="'Edit ' + e.name">
+            <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
+          </button>
+          <button
+            matIconButton
+            type="button"
+            (click)="removeExercise(e)"
+            [attr.aria-label]="'Delete ' + e.name"
+          >
+            <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+          </button>
+        </div>
+      </app-exercise-card>
+    }
+  }
+
+  @for (d of drafts(); track d.key) {
+    <app-exercise-form
+      class="exercise-form draft"
+      [startWith]="d.name"
+      [knownNames]="exerciseNames()"
+      [previous]="latestExercise"
+      (saved)="saveDraft(d.key, $event)"
+      (cancelled)="removeDraft(d.key)"
+    />
+  }
+
+  @if (!entry().exercises.length && !drafts().length) {
+    <p class="empty">
+      No exercises yet. Press Start:
+      {{ lastWorkout() ? 'pick one from last time, or add your own.' : 'add your first one.' }}
+    </p>
+  }
+</section>
+
+<button matButton="outlined" type="button" class="add-exercise" (click)="newDraft(null)">
+  <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+  Add exercise
+</button>

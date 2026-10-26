@@ -1,0 +1,128 @@
+<div class="page">
+  <!-- Quick capture: top on desktop, docked above the bottom nav on phones. -->
+  <form class="capture" (submit)="$event.preventDefault(); capture()">
+    <input
+      #captureInput
+      class="capture-input"
+      [formControl]="title"
+      placeholder="What's on your mind?"
+      aria-label="New quest"
+      autocomplete="off"
+      enterkeyhint="done"
+    />
+    <div class="capture-actions">
+      <app-tag-picker [(selected)]="captureTags" />
+      <button
+        matButton="outlined"
+        type="button"
+        class="importance-toggle"
+        [class.important]="captureImportance() === 'important'"
+        [class.urgent]="captureImportance() === 'urgent'"
+        (click)="cycleImportance()"
+        [attr.aria-label]="'Importance: ' + importanceLabels[captureImportance()] + '. Tap to change.'"
+      >
+        <mat-icon fontSet="material-symbols-outlined">{{
+          importanceIcons[captureImportance()] || 'label_important'
+        }}</mat-icon>
+        {{ importanceLabels[captureImportance()] }}
+      </button>
+      <span class="spacer"></span>
+      <button matButton="filled" type="submit" class="add" [disabled]="!title.value.trim()">Add</button>
+    </div>
+  </form>
+
+  <div class="filters">
+    <mat-button-toggle-group
+      class="choices horizons"
+      [value]="horizon()"
+      (change)="setHorizon($event.value)"
+      hideSingleSelectionIndicator
+      aria-label="Horizon"
+    >
+      @for (h of horizonOptions; track h) {
+        <mat-button-toggle [value]="h">
+          {{ horizonLabels[h] }} <span class="count">{{ horizonCounts()[h] }}</span>
+        </mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+
+    @if (store.tags().length) {
+      <div class="tag-filters" role="group" aria-label="Filter by tag">
+        @for (t of store.tags(); track t.id) {
+          <button
+            type="button"
+            class="tag-chip"
+            [class.active]="tagFilter() === t.id"
+            [attr.aria-pressed]="tagFilter() === t.id"
+            (click)="setTagFilter(t.id)"
+          >
+            {{ t.name }} <span class="count">{{ tagCounts().get(t.id) ?? 0 }}</span>
+          </button>
+        }
+        <button matIconButton type="button" class="manage-tags" (click)="manageTags()" aria-label="Manage tags">
+          <mat-icon fontSet="material-symbols-outlined">more_horiz</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+
+  <ul class="quests" aria-label="Open quests">
+    @for (l of visible(); track l.id) {
+      <li class="quest" [class.urgent]="l.importance === 'urgent'">
+        <button matIconButton type="button" class="close-quest" (click)="close(l)" [attr.aria-label]="'Complete ' + l.title">
+          <mat-icon fontSet="material-symbols-outlined">radio_button_unchecked</mat-icon>
+        </button>
+        <a class="quest-main" [routerLink]="[l.id]">
+          <span class="quest-title">{{ l.title }}</span>
+          @if (l.tagIds.length || hasNotes(l)) {
+            <span class="quest-meta">
+              @for (t of l.tagIds; track t) {
+                <span class="mini-tag">{{ tagName(t) }}</span>
+              }
+              @if (hasNotes(l)) {
+                <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes"
+                  >notes</mat-icon
+                >
+              }
+            </span>
+          }
+        </a>
+        @if (importanceIcons[l.importance]; as icon) {
+          <mat-icon
+            class="importance-icon"
+            [class.important]="l.importance === 'important'"
+            [class.urgent]="l.importance === 'urgent'"
+            fontSet="material-symbols-outlined"
+            [attr.aria-label]="importanceLabels[l.importance]"
+            >{{ icon }}</mat-icon
+          >
+        }
+      </li>
+    } @empty {
+      <li class="empty">{{ emptyMessage() }}</li>
+    }
+  </ul>
+
+  @if (closedVisible().length) {
+    <mat-expansion-panel class="closed">
+      <mat-expansion-panel-header>
+        <mat-panel-title>Completed ({{ closedVisible().length }})</mat-panel-title>
+      </mat-expansion-panel-header>
+      <ul class="quests closed-list" aria-label="Completed quests">
+        @for (l of closedVisible(); track l.id) {
+          <li class="quest is-closed">
+            <button matIconButton type="button" (click)="reopen(l)" [attr.aria-label]="'Reopen ' + l.title">
+              <mat-icon fontSet="material-symbols-outlined">check_circle</mat-icon>
+            </button>
+            <a class="quest-main" [routerLink]="[l.id]">
+              <span class="quest-title">{{ l.title }}</span>
+            </a>
+            <button matIconButton type="button" (click)="remove(l)" [attr.aria-label]="'Delete ' + l.title">
+              <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    </mat-expansion-panel>
+  }
+</div>

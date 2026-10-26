@@ -1,0 +1,150 @@
+.exercise-form {
+  display: flex;
+  flex-direction: column;
+  padding-top: 16px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 16px;
+}
+
+// Auto-fill: the app yellow (#f8da92), used as a faint tint
+// with full-strength yellow text/icons so it reads as "carried over" without shouting.
+:host {
+  --autofill: #f8da92;
+  --autofill-tint: color-mix(in srgb, var(--autofill) 12%, transparent);
+  --autofill-tint-strong: color-mix(in srgb, var(--autofill) 20%, transparent);
+  --autofill-border: color-mix(in srgb, var(--autofill) 35%, transparent);
+}
+
+.autofill-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -8px 0 16px;
+  padding: 2px 4px 2px 12px;
+  border: 1px solid var(--autofill-border);
+  border-radius: 8px;
+  background-color: var(--autofill-tint);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  mat-icon {
+    flex-shrink: 0;
+    color: var(--autofill);
+  }
+
+  .autofill-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .undo-autofill {
+    flex-shrink: 0;
+    --mat-button-text-label-text-color: var(--autofill);
+  }
+}
+
+.choices.auto-filled {
+  --mat-button-toggle-selected-state-background-color: var(--autofill-tint-strong);
+  --mat-button-toggle-selected-state-text-color: var(--autofill);
+}
+
+.weight-field.auto-filled {
+  --mat-form-field-filled-container-color: var(--autofill-tint);
+  --mat-form-field-filled-input-text-color: var(--autofill);
+}
+
+.auto-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  margin-left: 6px;
+  vertical-align: text-bottom;
+  color: var(--autofill);
+}
+
+.machine-setting {
+  margin-bottom: 16px;
+}
+
+// Fixed height so the label doesn't jump when "Clear" appears.
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+
+  .label {
+    margin-bottom: 0;
+  }
+}
+
+// Steps (sets and rests)
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.step {
+  padding: 8px 12px 0;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+
+  &.rest {
+    border-style: dashed;
+    background-color: var(--mat-sys-surface-container-lowest);
+  }
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+}
+
+.step-title {
+  font: var(--mat-sys-title-small);
+}
+
+.spacer {
+  height: 12px;
+}
+
+.label {
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 4px;
+}
+
+.error {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-error);
+  margin-top: 4px;
+}
+
+.set-details {
+  margin-top: 12px;
+}
+
+.weight-field {
+  flex: 0 1 160px;
+}
+
+.add-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 20px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

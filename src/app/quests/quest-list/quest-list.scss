@@ -1,0 +1,219 @@
+// Importance colors (shared with the quest page).
+:host {
+  --important: #f8da92; // app yellow (same as auto-fill)
+  --urgent: #ff8a65;
+  --urgent-tint: color-mix(in srgb, var(--urgent) 12%, transparent);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ---- Capture ----
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.capture-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-large);
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
+  }
+}
+
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+.importance-toggle {
+  &.important {
+    --mat-button-outlined-label-text-color: var(--important);
+  }
+
+  &.urgent {
+    --mat-button-outlined-label-text-color: var(--urgent);
+  }
+}
+
+// ---- Filters ----
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.count {
+  margin-left: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-small);
+}
+
+.tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-label-large);
+  cursor: pointer;
+
+  &.active {
+    background-color: var(--mat-sys-secondary-container);
+    border-color: transparent;
+    color: var(--mat-sys-on-secondary-container);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+  }
+}
+
+// ---- Quests ----
+
+.quests {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quest {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 2px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-container-low);
+
+  &.urgent {
+    border-color: color-mix(in srgb, var(--urgent) 45%, transparent);
+    background-color: var(--urgent-tint);
+  }
+
+  &.is-closed .quest-title {
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: line-through;
+  }
+}
+
+.close-quest:hover mat-icon {
+  color: var(--mat-sys-primary);
+}
+
+.quest-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 4px;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    border-radius: 4px;
+  }
+}
+
+.quest-title {
+  font: var(--mat-sys-body-large);
+}
+
+.quest-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.mini-tag {
+  padding: 0 8px;
+  border-radius: 999px;
+  background-color: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-small);
+}
+
+.notes-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.importance-icon {
+  flex-shrink: 0;
+
+  &.important {
+    color: var(--important);
+  }
+
+  &.urgent {
+    color: var(--urgent);
+  }
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+}
+
+.closed {
+  margin-top: 8px;
+}
+
+// ---- Phones: capture docked above the bottom nav, near the thumb ----
+
+@media (max-width: 599.98px) {
+  .capture {
+    order: 99;
+    position: sticky;
+    bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
+    z-index: 5;
+    background-color: var(--mat-sys-surface-container);
+    box-shadow: 0 -4px 16px rgb(0 0 0 / 40%);
+  }
+
+  .quest-title {
+    font: var(--mat-sys-body-medium);
+  }
+}

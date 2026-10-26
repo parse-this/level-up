@@ -1,0 +1,63 @@
+.new-entry {
+  margin-bottom: 24px;
+}
+
+// Menu content renders in an overlay but comes from this template, so these styles still apply.
+.menu-heading {
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+  padding: 8px 16px 0;
+}
+
+.entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-container-low);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--mat-sys-surface-container);
+  }
+}
+
+.entry-icon {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
+}
+
+.entry-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-title {
+  font: var(--mat-sys-title-medium);
+}
+
+.entry-meta,
+.entry-exercises {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.entry-exercises {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+}

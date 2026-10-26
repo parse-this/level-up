@@ -1,0 +1,116 @@
+// Phone = max-width 599.98px (same breakpoint everywhere).
+$phone: '(max-width: 599.98px)';
+
+:host {
+  display: block;
+  --bottom-nav-height: 64px;
+}
+
+.app-toolbar {
+  position: relative; // phone XP bar sits on its bottom edge
+  gap: 8px;
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  // Keep clear of notches / rounded corners.
+  padding-top: env(safe-area-inset-top);
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  height: auto;
+  min-height: 64px;
+}
+
+.app-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-title-icon {
+  height: 32px;
+  width: auto;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.settings-link.active {
+  color: var(--mat-sys-primary);
+}
+
+.app-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+// ---- Bottom nav (phones) ----
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--bottom-nav-height);
+  padding-bottom: env(safe-area-inset-bottom);
+  background-color: var(--mat-sys-surface-container);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+  font: var(--mat-sys-label-medium);
+
+  &.active {
+    color: var(--mat-sys-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -4px;
+  }
+}
+
+// ---- Show/hide by screen size ----
+
+.phone-only {
+  display: none;
+}
+
+@media #{$phone} {
+  .desktop-only {
+    display: none;
+  }
+
+  .phone-only {
+    display: flex;
+  }
+
+  .app-toolbar {
+    min-height: 56px;
+  }
+
+  // Slightly smaller title so the level badge fits beside it.
+  .app-title {
+    font: var(--mat-sys-title-medium);
+    white-space: nowrap;
+    gap: 6px;
+  }
+
+  .app-title-icon {
+    height: 28px;
+  }
+
+  .app-content {
+    padding: 16px 16px calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px);
+  }
+}

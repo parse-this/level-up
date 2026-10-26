@@ -1,0 +1,45 @@
+<button matButton="filled" type="button" class="new-entry" [matMenuTriggerFor]="newMenu">
+  <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+  New entry
+</button>
+
+<mat-menu #newMenu="matMenu">
+  <button mat-menu-item type="button" (click)="newWorkout()">
+    <mat-icon fontSet="material-symbols-outlined">fitness_center</mat-icon>
+    <span>Workout</span>
+  </button>
+  <mat-divider />
+  <div class="menu-heading" aria-hidden="true">Get Moving</div>
+  @for (a of activities; track a) {
+    <button mat-menu-item type="button" (click)="newMove(a)">
+      <mat-icon fontSet="material-symbols-outlined">directions_{{ a }}</mat-icon>
+      <span>{{ activityLabels[a] }}</span>
+    </button>
+  }
+  <mat-divider />
+  <button mat-menu-item type="button" (click)="newWeighIn()">
+    <mat-icon fontSet="material-symbols-outlined">monitor_weight</mat-icon>
+    <span>Weigh-in</span>
+  </button>
+</mat-menu>
+
+<nav class="entry-list" aria-label="Log">
+  @for (e of store.entries(); track e.id) {
+    @let names = exerciseNames(e);
+    <a class="entry" [routerLink]="['/training', e.id]">
+      <mat-icon class="entry-icon" fontSet="material-symbols-outlined" aria-hidden="true">{{
+        icon(e)
+      }}</mat-icon>
+      <div class="entry-main">
+        <div class="entry-title">{{ title(e) }}</div>
+        <div class="entry-meta">{{ meta(e) }}</div>
+        @if (names) {
+          <div class="entry-exercises">{{ names }}</div>
+        }
+      </div>
+      <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">chevron_right</mat-icon>
+    </a>
+  } @empty {
+    <p class="empty">Nothing logged yet. Press Start: tap "New entry".</p>
+  }
+</nav>

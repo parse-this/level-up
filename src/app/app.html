@@ -1,0 +1,49 @@
+<mat-toolbar class="app-toolbar">
+  <span class="app-title">
+    <img class="app-title-icon" src="images/mushroom-green.png" alt="" />
+    <span class="title-word">Level Up</span>
+  </span>
+  <span class="toolbar-spacer"></span>
+  <app-player-status />
+  <a
+    matIconButton
+    routerLink="/settings"
+    routerLinkActive="active"
+    class="settings-link desktop-only"
+    aria-label="Settings"
+  >
+    <mat-icon fontSet="material-symbols-outlined">settings</mat-icon>
+  </a>
+</mat-toolbar>
+
+<!-- Desktop: tabs under the banner. Phones use the bottom nav instead. -->
+<nav mat-tab-nav-bar class="app-tabs desktop-only" [tabPanel]="tabPanel">
+  @for (tab of tabs; track tab.path) {
+    <a
+      mat-tab-link
+      [routerLink]="tab.path"
+      routerLinkActive
+      #rla="routerLinkActive"
+      [active]="rla.isActive"
+    >
+      {{ tab.label }}
+    </a>
+  }
+</nav>
+
+<mat-tab-nav-panel #tabPanel>
+  <main class="app-content">
+    <router-outlet />
+  </main>
+</mat-tab-nav-panel>
+
+<app-xp-feedback />
+
+<nav class="bottom-nav phone-only" aria-label="Main">
+  @for (item of bottomNav; track item.path) {
+    <a class="bottom-nav-item" [routerLink]="item.path" routerLinkActive="active">
+      <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</mat-icon>
+      <span class="bottom-nav-label">{{ item.label }}</span>
+    </a>
+  }
+</nav>

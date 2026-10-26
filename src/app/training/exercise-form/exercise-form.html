@@ -1,0 +1,172 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>{{ exercise() ? 'Edit exercise' : 'New exercise' }}</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form class="exercise-form" [formGroup]="form" #formDir="ngForm" (ngSubmit)="submit()" novalidate>
+      <mat-form-field>
+        <mat-label>Exercise</mat-label>
+        <input matInput formControlName="name" autocomplete="off" [matAutocomplete]="nameAuto" />
+        <mat-autocomplete
+          #nameAuto="matAutocomplete"
+          class="name-suggestions"
+          (optionSelected)="nameSelected($event.option.value)"
+        >
+          @for (n of nameSuggestions(); track n) {
+            <mat-option [value]="n">{{ n }}</mat-option>
+          }
+        </mat-autocomplete>
+        <mat-error>Exercise is required.</mat-error>
+      </mat-form-field>
+
+      @if (autoFillNote(); as note) {
+        <div class="autofill-note" role="status">
+          <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">auto_awesome</mat-icon>
+          <span class="autofill-text"
+            >Filled from your last {{ note.name }} ({{ note.date | date: 'EEE, MMM d' }}):
+            {{ note.summary }}</span
+          >
+          <button matButton type="button" class="undo-autofill" (click)="undoAutoFill()">Undo</button>
+        </div>
+      }
+
+      <div class="machine-setting">
+        <div class="label-row">
+          <div class="label" id="machine-setting-label">Machine setting (optional)</div>
+          @if (form.controls.machineSetting.value != null) {
+            <button matButton type="button" class="clear-setting" (click)="clearMachineSetting()">
+              Clear
+            </button>
+          }
+        </div>
+        <mat-button-toggle-group
+          class="choices"
+          [class.auto-filled]="isAutoFilled(form.controls.machineSetting)"
+          formControlName="machineSetting"
+          hideSingleSelectionIndicator
+          aria-labelledby="machine-setting-label"
+        >
+          @for (n of machineOptions; track n) {
+            <mat-button-toggle [value]="n">{{ n }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+      </div>
+
+      @let labels = stepLabels(steps.getRawValue());
+      <div formArrayName="steps" class="steps">
+        @for (step of steps.controls; track step; let i = $index) {
+          <div
+            class="step"
+            [class.rest]="asRest(step)"
+            role="group"
+            [attr.aria-label]="labels[i]"
+            [formGroupName]="i"
+          >
+            <div class="step-header">
+              <span class="step-title"
+                >{{ asRest(step) ? 'Rest' : labels[i] }}
+                @if (asSet(step); as s) {
+                  @if (setIsAutoFilled(s)) {
+                    <mat-icon
+                      class="auto-icon"
+                      fontSet="material-symbols-outlined"
+                      aria-hidden="false"
+                      aria-label="Auto-filled"
+                      >auto_awesome</mat-icon
+                    >
+                  }
+                }
+              </span>
+              @if (canRemove(step)) {
+                <button
+                  matIconButton
+                  type="button"
+                  (click)="removeStep(i)"
+                  [attr.aria-label]="'Remove ' + labels[i].toLowerCase()"
+                >
+                  <mat-icon fontSet="material-symbols-outlined">close</mat-icon>
+                </button>
+              }
+            </div>
+
+            @if (asSet(step); as set) {
+              <div class="label" [id]="'reps-label-' + i">Reps</div>
+              <mat-button-toggle-group
+                class="choices"
+                [class.auto-filled]="isAutoFilled(set.controls.reps)"
+                formControlName="reps"
+                hideSingleSelectionIndicator
+                [attr.aria-labelledby]="'reps-label-' + i"
+              >
+                @for (n of repOptions; track n) {
+                  <mat-button-toggle [value]="n">{{ n }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+              @if (set.controls.reps.invalid && formDir.submitted) {
+                <div class="error">Pick the number of reps.</div>
+              }
+
+              <div class="row set-details">
+                <mat-form-field
+                  class="weight-field"
+                  [class.auto-filled]="isAutoFilled(set.controls.weight)"
+                >
+                  <mat-label>Weight (lb)</mat-label>
+                  <input matInput type="number" inputmode="decimal" min="0" formControlName="weight" />
+                  <mat-error>Can't be negative.</mat-error>
+                </mat-form-field>
+                <mat-slide-toggle
+                  formControlName="failure"
+                  (change)="toggled(set, 'failure', $event.checked)"
+                  >Failure?</mat-slide-toggle
+                >
+                <mat-slide-toggle formControlName="easy" (change)="toggled(set, 'easy', $event.checked)"
+                  >Easy?</mat-slide-toggle
+                >
+              </div>
+            }
+
+            @if (asRest(step); as rest) {
+              <div class="label" [id]="'rest-label-' + i">Minutes</div>
+              <mat-button-toggle-group
+                class="choices"
+                formControlName="minutes"
+                hideSingleSelectionIndicator
+                [attr.aria-labelledby]="'rest-label-' + i"
+              >
+                @for (n of restOptions; track n) {
+                  <mat-button-toggle [value]="n">{{ n }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+              @if (rest.controls.minutes.invalid && formDir.submitted) {
+                <div class="error">Pick the rest length.</div>
+              }
+              <div class="spacer"></div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="add-buttons">
+        <button matButton="outlined" type="button" class="add-set" (click)="addSet()">
+          <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+          Add set
+        </button>
+        <button matButton="outlined" type="button" class="add-rest" (click)="addRest()">
+          <mat-icon fontSet="material-symbols-outlined">timer</mat-icon>
+          Add rest
+        </button>
+      </div>
+
+      <mat-form-field>
+        <mat-label>Notes</mat-label>
+        <textarea matInput rows="2" formControlName="notes"></textarea>
+      </mat-form-field>
+
+      <div class="actions">
+        <button matButton type="button" class="cancel" (click)="cancel()">Cancel</button>
+        <button matButton="filled" type="submit">{{ exercise() ? 'Save' : 'Add' }}</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
