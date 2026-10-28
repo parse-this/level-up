@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { FontStyleService } from '../core/font-style.service';
+import { SimulationService } from '../core/simulation.service';
 
 interface SettingsSection {
   path: string;
@@ -70,6 +71,7 @@ interface SettingsSection {
 })
 export class SettingsHome {
   private readonly fontStyle = inject(FontStyleService);
+  private readonly simulation = inject(SimulationService);
 
   protected readonly sections = computed<SettingsSection[]>(() => [
     {
@@ -77,6 +79,14 @@ export class SettingsHome {
       icon: 'text_fields',
       title: 'Font style',
       description: `Now: ${this.fontStyle.styles.find((s) => s.id === this.fontStyle.current())?.label}`,
+    },
+    {
+      path: 'simulation',
+      icon: 'science',
+      title: 'Simulation mode',
+      description: this.simulation.active()
+        ? 'On: playing with sample data.'
+        : 'Try the app with sample data. Your own data stays safe.',
     },
     {
       path: 'about',

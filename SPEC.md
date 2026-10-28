@@ -51,6 +51,11 @@ ng add @angular/material
 src/app/
   app.config.ts                    provideRouter(routes, withComponentInputBinding())
   core/storage.service.ts          StorageService
+  core/app-keys.ts                 APP_KEY_PREFIX
+  core/simulation.service.ts       SimulationService (Simulation mode)
+  core/simulation-banner.ts        SimulationBanner
+  core/sample-data.ts              makeSampleData (lazy)
+  core/page-reload.ts              PAGE_RELOAD token
   core/confirm-dialog.ts           ConfirmDialog + ConfirmService
   core/back-rail.ts                BackRail (full-height back link)
   core/unsaved-changes.guard.ts    HasUnsavedChanges + unsavedChangesGuard
@@ -84,6 +89,7 @@ src/app/
   settings/settings.ts             shell: header + router-outlet
   settings/settings-home.ts        SettingsHome (section list)
   settings/font-style.ts           FontStyle (font style picker)
+  settings/simulation.ts           SimulationSettings
   settings/about.ts                About (both feature definitions)
   settings/save-load.ts            SaveLoad (Save game / Load game)
   core/save-game.ts                save-file helpers (pure)
@@ -97,7 +103,7 @@ All pages lazy-loaded (`loadComponent`) to stay under the 500 kB initial budget.
 - `training` → `Training`, tab title "Training Ground | Level Up Tracker"; children: `''` → `EntryList`; `:entryId` → `EntryDetail` (param → `entryId` input; `canDeactivate: [unsavedChangesGuard]`)
 - `quests` → `Quests`, tab title "Quest Log | Level Up Tracker"; children: `''` → `QuestList`; `:questId` → `QuestDetail`
 - `player` → `Player`, tab title "Player | Level Up Tracker"
-- `settings` → `Settings`, tab title "Settings | Level Up Tracker"; children: `''` → `SettingsHome`; `font-style` → `FontStyle` (title "Font style | Level Up Tracker"); `about` → `About` (title "About | Level Up Tracker"); `data` → `DataViewer` (title "View data | Level Up Tracker"); `credits` → `Credits`
+- `settings` → `Settings`, tab title "Settings | Level Up Tracker"; children: `''` → `SettingsHome`; `font-style` → `FontStyle` (title "Font style | Level Up Tracker"); `simulation` → `SimulationSettings` (title "Simulation mode | Level Up Tracker"); `about` → `About` (title "About | Level Up Tracker"); `data` → `DataViewer` (title "View data | Level Up Tracker"); `credits` → `Credits`
 - Old addresses redirect: `body-xp[/:entryId]` → `training[/:entryId]`, `open-loops[/:questId]` → `quests[/:questId]`.
 - `**` → redirect `training`
 
@@ -108,6 +114,17 @@ All pages lazy-loaded (`loadComponent`) to stay under the 500 kB initial budget.
 - Keys: `levelUpTracker.training.entries`, `levelUpTracker.quests.items`, `levelUpTracker.quests.tags`, `levelUpTracker.settings.fontStyle` (style id).
 - Key rename (temporary): `StorageService.loadRenamed(oldKey, key, fallback)` moves data from `levelUpTracker.bodyXp.entries` / `.openLoops.loops` / `.openLoops.tags` to the new keys once (never overwrites an existing new key; old key removed). Remove (back to `load`) once every browser in use has opened the app since the rename.
 - Optional fields omitted from saved data when empty. IDs: `crypto.randomUUID()`.
+- `PAGE_RELOAD` (`core/page-reload.ts`, root token → `location.reload()`, replaced in tests): used after Load game and Simulation mode changes so every store re-reads storage.
+
+## Simulation mode
+The app running on sample data, kept in its own storage location so real data is never read, changed or overwritten.
+- **Storage:** while active, `StorageService` maps app keys `levelUpTracker.X` → `levelUpSim.X` (`SIM_KEY_PREFIX`) for load/save/raw/saveRaw/remove/loadRenamed; `keys()` lists the sample keys (as app keys) + shared keys. Shared by both modes (not mapped): `levelUpTracker.settings.*` (`SHARED_KEY_PREFIX`, e.g. font style). Features are unaware. Save/Load game and View data work on whichever data is active.
+- **State:** `SimulationService` (root; `core/simulation.service.ts`) keeps `{active, bannerDismissed}` in `levelUp.simulation` (`SIM_META_KEY`; outside both prefixes, so never in saves or listings). `active()`, `showExplanation()` (= active && !bannerDismissed; shown on every entry until closed).
+- **Start:** `provideAppInitializer(() => SimulationService.init())` runs before anything reads storage. No saved state + no own data (any `levelUpTracker.*` key other than settings) → `enter()` (first visit). No saved state + own data → saves inactive state. Saved state → used; if active, the sample data is cleared and made fresh (dated from today) on every app open, so it always shows a few weeks of use up to now (changes made in the simulation reset). So it starts by itself only on a first visit; after exiting it never starts by itself again.
+- `enter()`: clears `levelUpSim.*`, seeds fresh sample data (`makeSampleData`, dynamically imported), saves active. `exit()`: clears `levelUpSim.*`, saves inactive. `dismissExplanation()`. Callers reload the page after `enter`/`exit`.
+- **Sample data** (`core/sample-data.ts`, `makeSampleData(now)` → app key → value): ~4 weeks ending today, deterministic. Training: Push/Pull/Leg workouts Mon/Wed/Fri with rising weights (PRs), golf Saturdays (18 / 9 holes with scores), walks/runs/rides other days, weigh-ins Mon/Thu, one golf not set up; rest days every few days keep streak bonuses small. Quests: 6 tags; open quests across horizons and importances (one Urgent, notes with lists/checklists), pinned "Golf club distances" (club yardages) and "Birthdays" (12 made-up names with dates), 4 completed, one captured today. **Level must stay below 10** (test checks several dates; ≈ Lv 7 today).
+- **Banner** (`SimulationBanner`, `core/simulation-banner.ts`, top of `main` above the router outlet, only while active): card (radius 12px; tertiary 45% border; bg tertiary 8% over surface-container-low). While the explanation shows, `.attention` plays the Urgent quest's rotating red → orange border (`::after` 2px ring via mask, `--quest-glow-angle`) + blurred outer glow (`::before`, z-index −1; host `isolation: isolate`): 2 laps of 2.5s, fading out by 5.6s, then the normal border. Plays on each page load; none with reduced motion. Bar: `science` icon (tertiary), "Simulation mode" (title-small) / "Playing with sample data" (body-small, muted), outlined **Exit** button ("Exit simulation"; "Exit" on phones) and, while the explanation shows, a close button (aria "Close explanation") → `dismissExplanation()`. Explanation (every entry, until closed): "Why am I here?" (what it's for, the same however you got here: shows the app as it looks after a few weeks of use, filled with sample workouts, quests and XP, so you can see what each feature does and learn how to use it before starting for real), "How to use it:" (try anything; practice; separate from your data; starts fresh each time you open the app), "Ready for real?" (tap Exit; sample cleared; back to your own data and level, or a fresh start if none yet; come back from Settings → Simulation mode). Exit → `ConfirmService` (dynamically imported) "Exit Simulation mode?" / "The sample data will be cleared and you'll be back to your own data and level. You can come back any time from Settings → Simulation mode." / "Exit simulation" → `exit()` + reload.
+- **Settings → Simulation mode** (`SimulationSettings`, `settings/simulation.ts`): "← Settings"; h2; explanation (sample data kept in its own place; made fresh each time the app opens, dated up to today, changes reset then too; exiting clears it). Active: "You're in Simulation mode now." (tertiary, `science`) + filled "Exit simulation" (`logout`; same confirm, "…you'll be back to your own data.") → exit + reload. Inactive: filled "Start simulation" (`science`; disabled while seeding) → `enter()`, navigate to `/` (home), reload: same full explanation banner as a first visit.
 
 ## Features
 
@@ -249,7 +266,7 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 
 #### `QuestDetail` (`quest-detail/`, route `:questId`)
 - Grid like `EntryDetail`: `BackRail` "All quests" → `/quests`.
-- Heading "Quest" (`radio_button_unchecked`) / "Completed quest" (`check_circle`) + `.heading-actions`: pin toggle `matIconButton` (`push_pin` / `keep_off` when pinned, primary when pinned; aria "Pin quest" / "Unpin quest", `aria-pressed`) → `setPinned`, tonal "Complete quest" (check) / "Reopen" (undo) (`.toggle-closed`; stays on the page) + delete (aria "Delete quest"; confirm "Delete quest?", then back to list). Unknown id: "Quest not found."
+- Heading "Quest" (`radio_button_unchecked`) / "Completed quest" (`check_circle`) + `.heading-actions` (row wraps; actions `margin-left: auto`, so on phones they drop under the heading, right-aligned): pin toggle `matIconButton` (`push_pin` / `keep_off` when pinned, primary when pinned; aria "Pin quest" / "Unpin quest", `aria-pressed`) → `setPinned`, tonal "Complete quest" (check) / "Reopen" (undo) (`.toggle-closed`; stays on the page) + delete (aria "Delete quest"; confirm "Delete quest?", then back to list). Unknown id: "Quest not found."
 - Autosave, loaded once per id; **each field saves on its own** (blank title isn't saved but doesn't block others): title ("Quest", required), "When" `WhenChoices` with first choice Inbox (saves on pick; not in the form group), "Importance" `.choices` with colored icons, "Tags" removable pills + `TagPicker`, "Notes" `NotesEditor` (keyed by id).
 - Footer: "Captured <date> [· Completed <date>]" (`MMM d, y, h:mm a`) + filled "Done" (check; `.done`) → `/quests`, like `EntryDetail`.
 
@@ -262,7 +279,7 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 ### Settings
 Not a tab: opened from the toolbar gear.
 - Header: "Settings — Options menu"
-- `SettingsHome`: `nav.sections`: list of section links (same row style as the Training Ground log: icon in primary, title, description, chevron_right). Sections (a `computed` list): "Font style" (icon `text_fields`, "Now: <current style label>") → `font-style`; "About" (icon `info`, "What the Training Ground and Quest Log are for.") → `about`; "View data" (icon `database`, "See everything saved in this browser.") → `data`; "Credits" (icon `favorite`, "Artwork and libraries used in the app.") → `credits`.
+- `SettingsHome`: `nav.sections`: list of section links (same row style as the Training Ground log: icon in primary, title, description, chevron_right). Sections (a `computed` list): "Font style" (icon `text_fields`, "Now: <current style label>") → `font-style`; "Simulation mode" (icon `science`, "On: playing with sample data." / "Try the app with sample data. Your own data stays safe.") → `simulation`; "About" (icon `info`, "What the Training Ground and Quest Log are for.") → `about`; "View data" (icon `database`, "See everything saved in this browser.") → `data`; "Credits" (icon `favorite`, "Artwork and libraries used in the app.") → `credits`.
 - `FontStyle` (`settings/font-style.ts`, route `font-style`, title "Font style | Level Up Tracker"): "← Settings"; h2 "Font style" + "Changes the whole app right away. Pick what reads best."; `mat-radio-group` (labelled by the h2; grid `auto-fill minmax(300px, 1fr)`, gap 8px) of `.font-option` cards (radio left, label fills the rest): its label in its heading font (18px) over its description in its body font (14px, muted); selected = primary border + surface-container → `FontStyleService.set`.
 - `SaveLoad` (`settings/save-load.ts`, route `save-load`, title "Save & Load | Level Up Tracker"; home section "Save & load game", icon `save`, "Back up your progress to a file, or restore it."): "← Settings"; h2 "Save & load game"; intro (progress lives in this browser; save to back up or move devices).
   - Card "Save game" (`save` avatar; "Download everything (training, quests, tags) as a save file."): filled "Save game" (download) → Blob download `level-up-save-YYYY-MM-DD.json` = `SaveFile {app:'level-up', version:1, savedAt, data: {key → parsed value}}` of every app key (pretty JSON).
@@ -307,7 +324,7 @@ Game layer on top; core labels stay plain. Everything is **derived from saved da
 - Collapsed "How XP works" panel: plain-language rules (values from constants).
 
 #### `XpFeedback` (in app root)
-- Effect compares previous `{xp, level, pr}`; skips first load. Pops (`.pop.pixel`, fixed top-right under banner, `aria-live` polite, pointer-events none): "New PR!" (yellow `#f8da92`, 2.2s), "+N XP" on increases only (green pill, 1.6s float-up/fade), "LEVEL UP! Lv N" with mushroom-pixel.png `.pixel-art` (32px, scale-in, 3.2s), "Level down: Lv N" (muted, 2.6s). Reduced motion: no animation.
+- Effect compares previous `{xp, level, pr}`; skips first load. Pops (`.pop.pixel`, fixed top-right under banner, `aria-live` polite, pointer-events none): "New PR!" (yellow `#f8da92`, 2.2s), "+N XP" on increases only (green pill, 1.6s float-up/fade), "LEVEL UP! Lv N" with mushroom-pixel.png `.pixel-art` (32px, scale-in, 3.2s), "LEVEL DOWN… Lv N" (dark mirror of LEVEL UP: 13px card, bg `#690005`, text `#ffdad6`, 2px `#ff5449` border + red glow, mushroom grey + upside down; drops in, shakes, sinks; 3.2s). Reduced motion: no animation.
 
 #### Themed text
 - Empty states: "Nothing logged yet. Press Start: tap "New entry"."; "No exercises yet. Press Start: …"; "Inbox empty. Mind clear!"; "No save data yet."
@@ -334,5 +351,7 @@ Game layer on top; core labels stay plain. Everything is **derived from saved da
 
 ## Wish list
 - Reminders: in-app (tabled) and outside the app (phone notifications; needs a server/push).
-- Achievements (trophy room), 8-bit sound effects (mute in Settings), real VIT/AGI/STR stats.
+- Achievements / badges (trophy room), 8-bit sound effects (mute in Settings), real VIT/AGI/STR stats. Badges could be derived from saved data like XP (first workout, 5/10/30-day streak, PR counts, level milestones, quests completed), so past progress earns them too.
+- Quest Log: repeatable quests (daily/weekly chores that come back when due); a reference section ("Codex") if pinned quests outgrow the Quest Log; golf "My bag" (club distances) in Golf.
+- Quest Log: keyboard reordering; quest row as its own component (list styles are over the 4 kB component budget).
 - Auto-saving unsaved exercise drafts; warning on browser close.

@@ -10,11 +10,11 @@ interface Pop {
 }
 
 /** How long each kind of pop stays on screen (ms). */
-const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200, 'level-down': 2600 };
+const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200, 'level-down': 3200 };
 
 /**
  * Floating feedback when progress changes: "+N XP", "New PR!", "LEVEL UP! Lv N" (with the 1-Up
- * mushroom), "Level down: Lv N". Nothing on first load; XP decreases don't pop.
+ * mushroom), "LEVEL DOWN… Lv N" (red, drained mushroom). Nothing on first load; XP decreases don't pop.
  */
 @Component({
   selector: 'app-xp-feedback',
@@ -22,7 +22,7 @@ const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200
     <div class="pops" aria-live="polite">
       @for (p of pops(); track p.id) {
         <div class="pop pixel" [class]="'pop pixel ' + p.kind">
-          @if (p.kind === 'level-up') {
+          @if (p.kind === 'level-up' || p.kind === 'level-down') {
             <img src="images/mushroom-pixel.png" alt="" class="mushroom pixel-art" />
           }
           {{ p.text }}
@@ -69,10 +69,21 @@ const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200
       animation: level-up 3.2s ease-out forwards;
     }
 
+    // The dark mirror of LEVEL UP: red, a drained (grey, upside-down) mushroom, drops in, shakes, sinks.
     .level-down {
-      background-color: var(--mat-sys-surface-container-highest);
-      color: var(--mat-sys-on-surface);
-      animation-duration: 2.6s;
+      padding: 10px 14px;
+      border: 2px solid #ff5449;
+      border-radius: 12px;
+      font-size: 13px;
+      background-color: #690005;
+      color: #ffdad6;
+      box-shadow: 0 0 16px rgb(255 59 48 / 45%);
+      animation: level-down 3.2s ease-in forwards;
+
+      .mushroom {
+        transform: rotate(180deg);
+        filter: grayscale(1) brightness(0.75);
+      }
     }
 
     .mushroom {
@@ -118,6 +129,40 @@ const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200
       }
     }
 
+    @keyframes level-down {
+      0% {
+        opacity: 0;
+        transform: translateY(-24px);
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      14% {
+        transform: translateX(-8px);
+      }
+      18% {
+        transform: translateX(8px);
+      }
+      22% {
+        transform: translateX(-6px);
+      }
+      26% {
+        transform: translateX(6px);
+      }
+      30% {
+        transform: translateX(0);
+      }
+      80% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .pop {
         animation-name: none;
@@ -148,7 +193,7 @@ export class XpFeedback {
         if (now.pr > before.pr) this.show('pr', 'New PR!');
         if (now.xp > before.xp) this.show('xp', `+${now.xp - before.xp} XP`);
         if (now.level > before.level) this.show('level-up', `LEVEL UP! Lv ${now.level}`);
-        else if (now.level < before.level) this.show('level-down', `Level down: Lv ${now.level}`);
+        else if (now.level < before.level) this.show('level-down', `LEVEL DOWN… Lv ${now.level}`);
       });
     });
   }

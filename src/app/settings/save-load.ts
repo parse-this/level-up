@@ -1,10 +1,11 @@
-import { Component, InjectionToken, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../core/confirm-dialog';
+import { PAGE_RELOAD } from '../core/page-reload';
 import {
   SaveFile,
   describeSave,
@@ -15,11 +16,7 @@ import {
 } from '../core/save-game';
 import { StorageService } from '../core/storage.service';
 
-/** Reloads the page so every feature re-reads storage. Replaceable in tests. */
-export const PAGE_RELOAD = new InjectionToken<() => void>('PAGE_RELOAD', {
-  providedIn: 'root',
-  factory: () => () => location.reload(),
-});
+export { PAGE_RELOAD };
 
 /** Save game (download everything as a file) / Load game (merge or replace from a file). */
 @Component({

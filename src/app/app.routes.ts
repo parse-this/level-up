@@ -52,6 +52,11 @@ export const routes: Routes = [
         loadComponent: () => import('./settings/font-style').then((m) => m.FontStyle),
       },
       {
+        path: 'simulation',
+        title: 'Simulation mode | Level Up Tracker',
+        loadComponent: () => import('./settings/simulation').then((m) => m.SimulationSettings),
+      },
+      {
         path: 'about',
         title: 'About | Level Up Tracker',
         loadComponent: () => import('./settings/about').then((m) => m.About),

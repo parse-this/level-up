@@ -5,6 +5,7 @@ import { routes } from '../app.routes';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { StorageService } from '../core/storage.service';
 import { PAGE_RELOAD } from './save-load';
+import { SimulationService } from '../core/simulation.service';
 
 describe('Settings', { timeout: 15_000 }, () => {
   beforeEach(() => {
@@ -24,11 +25,12 @@ describe('Settings', { timeout: 15_000 }, () => {
     return { harness, el, text };
   };
 
-  it('lists sections: Font style (showing the current one), About, Save & load game, View data, Credits', async () => {
+  it('lists sections: Font style (showing the current one), Simulation mode, About, Save & load game, View data, Credits', async () => {
     const { el, text, harness } = await open('/settings');
     expect(text('h1')).toEqual(['Settings — Options menu']);
     expect(text('nav.sections .section-title')).toEqual([
       'Font style',
+      'Simulation mode',
       'About',
       'Save & load game',
       'View data',
@@ -36,9 +38,23 @@ describe('Settings', { timeout: 15_000 }, () => {
     ]);
     expect(text('nav.sections .section-description')[0]).toBe('Now: Exo 2');
 
-    el().querySelectorAll<HTMLElement>('nav.sections .section')[3].click();
+    el().querySelectorAll<HTMLElement>('nav.sections .section')[4].click();
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/settings/data');
+  });
+
+  it('Simulation mode: Start goes to the home page and reloads, with the full explanation', async () => {
+    const reload = vi.fn();
+    TestBed.overrideProvider(PAGE_RELOAD, { useValue: reload });
+    const { el, harness } = await open('/settings/simulation');
+    el().querySelector<HTMLButtonElement>('.enter')!.click();
+    await vi.waitFor(() => expect(reload).toHaveBeenCalled());
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/training');
+    const sim = TestBed.inject(SimulationService);
+    expect(sim.active()).toBe(true);
+    expect(sim.showExplanation()).toBe(true);
   });
 
   it('Font style: defaults to Exo 2; picking one saves it and applies it to <html>', async () => {

@@ -6,6 +6,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { FontStyleService } from './core/font-style.service';
 import { PlayerStatus } from './core/player-status';
+import { SimulationBanner } from './core/simulation-banner';
 import { XpFeedback } from './core/xp-feedback';
 
 @Component({
@@ -18,6 +19,7 @@ import { XpFeedback } from './core/xp-feedback';
     MatToolbarModule,
     MatTabsModule,
     PlayerStatus,
+    SimulationBanner,
     XpFeedback,
   ],
   selector: 'app-root',

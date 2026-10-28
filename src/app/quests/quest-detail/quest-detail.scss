@@ -7,17 +7,19 @@
 
 .heading-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 16px;
 }
 
+// Wraps under the heading (right-aligned) when there isn't room beside it, e.g. on phones.
 .heading-actions {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .pin-toggle.pinned {
