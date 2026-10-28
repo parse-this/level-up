@@ -67,6 +67,20 @@
   }
 }
 
+// Pin toggle: highlighted (filled pin, tonal background) while on.
+.capture-pin {
+  color: var(--mat-sys-on-surface-variant);
+
+  &.pinned {
+    background-color: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+
+    mat-icon {
+      font-variation-settings: 'FILL' 1;
+    }
+  }
+}
+
 // ---- Filters ----
 
 .filters {
@@ -117,20 +131,51 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  // Keeps the Urgent glow (z-index -1) behind its row but in front of the page.
+  isolation: isolate;
 }
 
 .quest {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px 2px 2px;
+  gap: 2px;
+  padding: 2px 8px 2px 0;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 12px;
   background-color: var(--mat-sys-surface-container-low);
 
+  // Urgent: a red → reddish-orange light circles the border clockwise, with a soft glow.
   &.urgent {
-    border-color: color-mix(in srgb, var(--urgent) 45%, transparent);
-    background-color: var(--urgent-tint);
+    --glow-dim: color-mix(in srgb, #ff3b30 30%, transparent);
+    --glow-ring: conic-gradient(
+      from var(--quest-glow-angle),
+      var(--glow-dim) 0deg,
+      #ff3b30 60deg,
+      #ff6a3d 100deg,
+      #ff8a65 130deg,
+      var(--glow-dim) 180deg,
+      var(--glow-dim) 360deg
+    );
+    border: 1.5px solid transparent;
+    background:
+      linear-gradient(var(--urgent-tint), var(--urgent-tint)) padding-box,
+      linear-gradient(var(--mat-sys-surface-container-low), var(--mat-sys-surface-container-low)) padding-box,
+      var(--glow-ring) border-box;
+    animation: quest-glow-spin 3.5s linear infinite;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      z-index: -1;
+      border-radius: inherit;
+      background: var(--glow-ring);
+      filter: blur(7px);
+      opacity: 0.55;
+      pointer-events: none;
+      animation: quest-glow-spin 3.5s linear infinite;
+    }
   }
 
   // Completed: faded "disabled" look (no strikethrough, easier to read); full color on hover.
@@ -155,6 +200,86 @@
       color: var(--mat-sys-on-surface-variant);
     }
   }
+}
+
+@keyframes quest-glow-spin {
+  to {
+    --quest-glow-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest.urgent,
+  .quest.urgent::before {
+    animation: none;
+  }
+}
+
+// ---- Drag ordering ----
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 0 0 4px;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.6;
+  cursor: grab;
+  touch-action: none;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+}
+
+.cdk-drag-preview {
+  box-sizing: border-box;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  cursor: grabbing;
+}
+
+.quest-placeholder {
+  min-height: 48px;
+  border: 1px dashed var(--mat-sys-outline);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 6%, transparent);
+}
+
+.cdk-drag-animating,
+.quests.cdk-drop-list-dragging .quest:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// ---- Pinned ----
+
+.pinned-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.pinned-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
+
+.pin-icon {
+  width: 40px;
+  text-align: center;
+  color: var(--mat-sys-primary);
+  font-size: 20px;
 }
 
 .close-quest:hover mat-icon {

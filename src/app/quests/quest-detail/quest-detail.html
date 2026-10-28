@@ -11,6 +11,18 @@
           {{ l.closedAt ? 'Completed quest' : 'Quest' }}
         </h2>
         <div class="heading-actions">
+          <button
+            matIconButton
+            type="button"
+            class="pin-toggle"
+            [class.pinned]="l.pinned"
+            (click)="togglePinned()"
+            [attr.aria-label]="l.pinned ? 'Unpin quest' : 'Pin quest'"
+            [attr.aria-pressed]="!!l.pinned"
+            [title]="l.pinned ? 'Unpin' : 'Pin to the top of the Quest Log'"
+          >
+            <mat-icon fontSet="material-symbols-outlined">{{ l.pinned ? 'keep_off' : 'push_pin' }}</mat-icon>
+          </button>
           <button matButton="tonal" type="button" class="toggle-closed" (click)="toggleClosed()">
             <mat-icon fontSet="material-symbols-outlined">{{ l.closedAt ? 'undo' : 'check' }}</mat-icon>
             {{ l.closedAt ? 'Reopen' : 'Complete quest' }}

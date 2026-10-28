@@ -97,6 +97,59 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       expect(document.activeElement).toBe(el().querySelector('.capture-input'));
     });
 
+    it('pinned quests sit in a Pinned section on every When tab (no complete button, not counted)', async () => {
+      const golf = store().add('Golf club distances', { horizon: 'someday' });
+      store().add('Mow the lawn', { horizon: 'now' });
+      store().setPinned(golf.id, true);
+      const { el, text, toggle } = await open('/quests');
+
+      expect(text('.pinned-list .quest-title')).toEqual(['Golf club distances']);
+      expect(text('.quests[aria-label="Open quests"] .quest-title')).toEqual(['Mow the lawn']);
+      expect(el().querySelector('.pinned-list .close-quest')).toBeNull();
+      expect(text('.horizons mat-button-toggle')).toEqual(['All 1', 'Today 1', 'Soon 0', 'Someday 0']);
+
+      await toggle('Today');
+      expect(text('.pinned-list .quest-title')).toEqual(['Golf club distances']);
+
+      store().setPinned(golf.id, false);
+      await toggle('All');
+      expect(el().querySelector('.pinned-section')).toBeNull();
+      expect(store().byId(golf.id)!.pinned).toBeUndefined();
+    });
+
+    it('Capture can pin the new quest; the pin resets after', async () => {
+      const { el, type, click, stable, text } = await open('/quests');
+      await click('.capture-pin');
+      expect(el().querySelector('.capture-pin')!.getAttribute('aria-pressed')).toBe('true');
+      await type('.capture-input', 'Golf club distances');
+      el().querySelector('form.capture')!.dispatchEvent(new Event('submit'));
+      await stable();
+
+      expect(store().open()[0].pinned).toBe(true);
+      expect(text('.pinned-list .quest-title')).toEqual(['Golf club distances']);
+      expect(el().querySelector('.capture-pin')!.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('drag ordering: reorder keeps filtered-out quests in place; new quests go on top', async () => {
+      const a = store().add('A', { horizon: 'now' });
+      const b = store().add('B', { horizon: 'soon' });
+      const c = store().add('C', { horizon: 'now' });
+      [a, b, c].forEach((q, i) => store().update({ ...store().byId(q.id)!, createdAt: `2026-01-0${i + 1}T00:00:00Z` }));
+      // Default order: newest first.
+      expect(store().open().map((q) => q.title)).toEqual(['C', 'B', 'A']);
+
+      // In the Today tab only A and C show; moving A above C swaps them around B.
+      store().reorder([a.id, c.id]);
+      expect(store().open().map((q) => q.title)).toEqual(['A', 'B', 'C']);
+
+      store().add('D');
+      expect(store().open().map((q) => q.title)).toEqual(['D', 'A', 'B', 'C']);
+      expect(b.id).toBeTruthy();
+
+      const { text } = await open('/quests');
+      expect(text('.quests[aria-label="Open quests"] .quest-title')).toEqual(['D', 'A', 'B', 'C']);
+    });
+
     it('captures into the chosen When (same choices as the tabs, optional); starts on the viewed tab and resets after', async () => {
       const { el, text, type, toggle, stable } = await open('/quests');
       const capture = el().querySelector('.capture')!;
@@ -276,6 +329,15 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       el().querySelector<HTMLElement>('[aria-label="Remove tag Home"]')!.click();
       await stable();
       expect(quest().tagIds).toEqual([]);
+    });
+
+    it('pins and unpins from the quest page', async () => {
+      const l = store().add('Golf club distances');
+      const { click } = await open(`/quests/${l.id}`);
+      await click('[aria-label="Pin quest"]');
+      expect(quest().pinned).toBe(true);
+      await click('[aria-label="Unpin quest"]');
+      expect(quest().pinned).toBeUndefined();
     });
 
     it('closes / reopens, and deletes after confirming', async () => {

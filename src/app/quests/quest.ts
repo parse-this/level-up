@@ -39,6 +39,21 @@ export interface Quest {
   createdAt: string;
   /** ISO time closed; absent while open. Closing keeps everything else. */
   closedAt?: string;
+  /** Kept at the top of the Quest Log for reference (any When). Omitted when not pinned. */
+  pinned?: true;
+  /** Manual position from drag ordering (lower = higher up). Missing on quests never ordered. */
+  order?: number;
+}
+
+/**
+ * List order: manual `order` first (lower = higher up); quests without one come after,
+ * Urgent → Important → Normal, newest first.
+ */
+export function byOrder(a: Quest, b: Quest): number {
+  if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+  if (a.order !== undefined) return -1;
+  if (b.order !== undefined) return 1;
+  return byImportanceThenNewest(a, b);
 }
 
 export interface Tag {

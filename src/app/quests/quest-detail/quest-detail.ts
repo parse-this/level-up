@@ -114,6 +114,11 @@ export class QuestDetail {
     this.store.update(html ? { ...rest, notes: html } : rest);
   }
 
+  protected togglePinned(): void {
+    const l = this.quest();
+    if (l) this.store.setPinned(l.id, !l.pinned);
+  }
+
   protected toggleClosed(): void {
     const l = this.quest();
     if (!l) return;

@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { StorageService } from '../core/storage.service';
-import { HORIZONS, Horizon, Importance, Quest, Tag, byImportanceThenNewest } from './quest';
+import { HORIZONS, Horizon, Importance, Quest, Tag, byOrder } from './quest';
 
 export const QUESTS_KEY = 'levelUpTracker.quests.items';
 export const TAGS_KEY = 'levelUpTracker.quests.tags';
@@ -28,8 +28,8 @@ export class QuestStore {
     [...this.allTags()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
   );
 
-  /** Open quests: Urgent → Important → Normal, newest first within each. */
-  readonly open = computed(() => this.allQuests().filter((l) => !l.closedAt).sort(byImportanceThenNewest));
+  /** Open quests (pinned included), in list order: dragged order, else Urgent → Normal, newest first. */
+  readonly open = computed(() => this.allQuests().filter((l) => !l.closedAt).sort(byOrder));
 
   /** Closed quests, most recently closed first. */
   readonly closed = computed(() =>
@@ -54,7 +54,10 @@ export class QuestStore {
   }
 
   /** Captures a quest into the Inbox. */
-  add(title: string, options: { tagIds?: string[]; importance?: Importance; horizon?: Horizon } = {}): Quest {
+  add(
+    title: string,
+    options: { tagIds?: string[]; importance?: Importance; horizon?: Horizon; pinned?: boolean } = {},
+  ): Quest {
     const quest: Quest = {
       id: crypto.randomUUID(),
       title: title.trim(),
@@ -62,9 +65,34 @@ export class QuestStore {
       importance: options.importance ?? 'normal',
       tagIds: options.tagIds ?? [],
       createdAt: new Date().toISOString(),
+      ...(options.pinned ? { pinned: true as const } : {}),
     };
+    // Once quests have been dragged into an order, new ones go on top.
+    const orders = this.allQuests().flatMap((l) => (l.order === undefined ? [] : [l.order]));
+    if (orders.length) quest.order = Math.min(...orders) - 1;
     this.commitQuests([...this.allQuests(), quest]);
     return quest;
+  }
+
+  setPinned(id: string, pinned: boolean): void {
+    this.patch(id, ({ pinned: _old, ...l }) => (pinned ? { ...l, pinned: true } : l));
+  }
+
+  /**
+   * Drag ordering. `ids` = a visible list (possibly filtered) in its new order. Those quests swap
+   * among the positions they held in the full open list; everything else stays put. Every open
+   * quest is then numbered, so the order is fully manual from here on.
+   */
+  reorder(ids: string[]): void {
+    const open = this.open();
+    const moved = new Set(ids);
+    const byIdMap = new Map(open.map((l) => [l.id, l]));
+    let next = 0;
+    const ordered = open.map((l) => (moved.has(l.id) ? byIdMap.get(ids[next++])! : l));
+    const orderOf = new Map(ordered.map((l, i) => [l.id, i]));
+    this.commitQuests(
+      this.allQuests().map((l) => (orderOf.has(l.id) ? { ...l, order: orderOf.get(l.id)! } : l)),
+    );
   }
 
   /** Saves a changed quest (matched by id). */

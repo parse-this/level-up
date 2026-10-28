@@ -20,6 +20,10 @@
   flex-shrink: 0;
 }
 
+.pin-toggle.pinned {
+  color: var(--mat-sys-primary);
+}
+
 .quest-heading {
   display: flex;
   align-items: center;

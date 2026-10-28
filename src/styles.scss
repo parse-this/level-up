@@ -130,6 +130,13 @@ body {
   image-rendering: pixelated;
 }
 
+// Animatable angle for the Urgent quest's rotating border (Quest Log).
+@property --quest-glow-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 // Pop-up menus (tag picker, New entry): a border so they stand out from the page behind.
 .mat-mdc-menu-panel.mat-mdc-menu-panel {
   border: 1px solid var(--mat-sys-outline);

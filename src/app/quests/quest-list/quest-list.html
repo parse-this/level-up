@@ -33,6 +33,18 @@
         }}</mat-icon>
         {{ importanceLabels[captureImportance()] }}
       </button>
+      <button
+        matIconButton
+        type="button"
+        class="capture-pin"
+        [class.pinned]="capturePinned()"
+        (click)="capturePinned.set(!capturePinned())"
+        [attr.aria-pressed]="capturePinned()"
+        aria-label="Pin to the top"
+        [title]="capturePinned() ? 'Will be pinned' : 'Pin to the top'"
+      >
+        <mat-icon fontSet="material-symbols-outlined">push_pin</mat-icon>
+      </button>
       <span class="spacer"></span>
       <button matButton="filled" type="submit" class="add" [disabled]="!title.value.trim()">Add</button>
     </div>
@@ -68,37 +80,72 @@
     }
   </div>
 
-  <ul class="quests" aria-label="Open quests">
-    @for (l of visible(); track l.id) {
-      <li class="quest" [class.urgent]="l.importance === 'urgent'">
-        <button matIconButton type="button" class="close-quest" (click)="close(l)" [attr.aria-label]="'Complete ' + l.title">
-          <mat-icon fontSet="material-symbols-outlined">radio_button_unchecked</mat-icon>
-        </button>
-        <a class="quest-main" [routerLink]="[l.id]">
-          <span class="quest-title">{{ l.title }}</span>
-          @if (l.tagIds.length || hasNotes(l)) {
-            <span class="quest-meta">
-              @for (t of l.tagIds; track t) {
-                <span class="mini-tag">{{ tagName(t) }}</span>
-              }
-              @if (hasNotes(l)) {
-                <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes"
-                  >notes</mat-icon
-                >
-              }
-            </span>
+  <!-- One open-quest row (pinned or not). Pinned rows show a pin instead of the complete button. -->
+  <ng-template #questRow let-l>
+    <span class="drag-handle" cdkDragHandle title="Drag to reorder" aria-hidden="true">
+      <mat-icon fontSet="material-symbols-outlined">drag_indicator</mat-icon>
+    </span>
+    @if (l.pinned) {
+      <mat-icon class="pin-icon" fontSet="material-symbols-outlined" aria-label="Pinned">push_pin</mat-icon>
+    } @else {
+      <button matIconButton type="button" class="close-quest" (click)="close(l)" [attr.aria-label]="'Complete ' + l.title">
+        <mat-icon fontSet="material-symbols-outlined">radio_button_unchecked</mat-icon>
+      </button>
+    }
+    <a class="quest-main" [routerLink]="[l.id]">
+      <span class="quest-title">{{ l.title }}</span>
+      @if (l.tagIds.length || hasNotes(l)) {
+        <span class="quest-meta">
+          @for (t of l.tagIds; track t) {
+            <span class="mini-tag">{{ tagName(t) }}</span>
           }
-        </a>
-        @if (importanceIcons[l.importance]; as icon) {
-          <mat-icon
-            class="importance-icon"
-            [class.important]="l.importance === 'important'"
-            [class.urgent]="l.importance === 'urgent'"
-            fontSet="material-symbols-outlined"
-            [attr.aria-label]="importanceLabels[l.importance]"
-            >{{ icon }}</mat-icon
-          >
+          @if (hasNotes(l)) {
+            <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes"
+              >notes</mat-icon
+            >
+          }
+        </span>
+      }
+    </a>
+    @if (importanceIcon(l); as icon) {
+      <mat-icon
+        class="importance-icon"
+        [class.important]="l.importance === 'important'"
+        [class.urgent]="l.importance === 'urgent'"
+        fontSet="material-symbols-outlined"
+        [attr.aria-label]="importanceLabel(l)"
+        >{{ icon }}</mat-icon
+      >
+    }
+  </ng-template>
+
+  @if (pinnedVisible().length) {
+    <section class="pinned-section">
+      <h3 class="group-title pinned-title" id="pinned-title">
+        <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">push_pin</mat-icon>
+        Pinned
+      </h3>
+      <ul
+        class="quests pinned-list"
+        aria-labelledby="pinned-title"
+        cdkDropList
+        (cdkDropListDropped)="dropped(pinnedVisible(), $event)"
+      >
+        @for (l of pinnedVisible(); track l.id) {
+          <li class="quest is-pinned" [class.urgent]="l.importance === 'urgent'" cdkDrag cdkDragLockAxis="y">
+            <div class="quest-placeholder" *cdkDragPlaceholder></div>
+            <ng-container *ngTemplateOutlet="questRow; context: { $implicit: l }" />
+          </li>
         }
+      </ul>
+    </section>
+  }
+
+  <ul class="quests" aria-label="Open quests" cdkDropList (cdkDropListDropped)="dropped(visible(), $event)">
+    @for (l of visible(); track l.id) {
+      <li class="quest" [class.urgent]="l.importance === 'urgent'" cdkDrag cdkDragLockAxis="y">
+        <div class="quest-placeholder" *cdkDragPlaceholder></div>
+        <ng-container *ngTemplateOutlet="questRow; context: { $implicit: l }" />
       </li>
     } @empty {
       <li class="empty">{{ emptyMessage() }}</li>
