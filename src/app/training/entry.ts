@@ -52,7 +52,8 @@ export const ACTIVITIES = ['walk', 'run', 'bike'] as const;
 export type Activity = (typeof ACTIVITIES)[number];
 export const ACTIVITY_LABELS: Record<Activity, string> = { walk: 'Walk', run: 'Run', bike: 'Bike' };
 
-interface EntryBase {
+/** Fields every entry has. These are kept when an entry changes type. */
+export interface EntryBase {
   id: string;
   /** Local date, `YYYY-MM-DD`. */
   date: string;
@@ -112,6 +113,129 @@ export type Entry = WorkoutEntry | MoveEntry | WeighInEntry | SportEntry;
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 export type NewEntry = DistributiveOmit<Entry, 'id' | 'createdAt'>;
+
+/** A type's "new and blank" fields, e.g. `{ type: 'sport', sport: 'golf' }`. */
+export type EntryTypeInit = DistributiveOmit<Entry, keyof EntryBase>;
+
+/** One choice in the New entry / Change type menus. */
+export interface EntryTypeOption {
+  label: string;
+  icon: string;
+  /** Muted heading shown before the first option of a group. */
+  group?: string;
+  init: EntryTypeInit;
+}
+
+/** Menu order: Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in. */
+export const ENTRY_TYPE_OPTIONS: EntryTypeOption[] = [
+  { label: 'Workout', icon: 'fitness_center', init: { type: 'workout', exercises: [] } },
+  ...ACTIVITIES.map((activity) => ({
+    label: ACTIVITY_LABELS[activity],
+    icon: `directions_${activity}`,
+    group: 'Get Moving',
+    init: { type: 'move' as const, activity },
+  })),
+  ...SPORTS.map((sport) => ({
+    label: SPORT_LABELS[sport],
+    icon: SPORT_ICONS[sport],
+    group: 'Sport',
+    init: { type: 'sport' as const, sport },
+  })),
+  { label: 'Weigh-in', icon: 'monitor_weight', init: { type: 'weigh-in' } },
+];
+
+/** Same type (and same activity / sport): changing to it would do nothing. */
+export function isSameKind(entry: Entry | EntryTypeInit, init: EntryTypeInit): boolean {
+  if (entry.type !== init.type) return false;
+  if (entry.type === 'move' && init.type === 'move') return entry.activity === init.activity;
+  if (entry.type === 'sport' && init.type === 'sport') return entry.sport === init.sport;
+  return true;
+}
+
+/** Label for a type choice ("Workout", "Run", "Golf", "Weigh-in"). */
+export function typeLabel(init: EntryTypeInit): string {
+  return ENTRY_TYPE_OPTIONS.find((o) => isSameKind(init, o.init))?.label ?? init.type;
+}
+
+const join = (parts: string[]) =>
+  parts.length < 2 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+
+/**
+ * What changing this entry to another type would remove, for the confirm message
+ * (e.g. ["name", "3 exercises"]). Empty when nothing would be lost.
+ * (Walk ↔ Run ↔ Bike keeps everything, so callers skip this for those.)
+ */
+export function droppedFields(entry: Entry): string[] {
+  switch (entry.type) {
+    case 'workout': {
+      const n = entry.exercises.length;
+      return [...(entry.name ? ['name'] : []), ...(n ? [`${n} ${n === 1 ? 'exercise' : 'exercises'}`] : [])];
+    }
+    case 'move':
+      return [
+        ...(entry.distance != null ? ['distance'] : []),
+        ...(entry.durationMinutes != null ? ['time'] : []),
+        ...(entry.location ? ['location'] : []),
+      ];
+    case 'weigh-in':
+      return entry.weight != null ? ['weight'] : [];
+    case 'sport':
+      return [...(entry.format ? ['type'] : []), ...(entry.score != null ? ['score'] : [])];
+  }
+}
+
+/** "name and 3 exercises", for messages. */
+export function describeFields(fields: string[]): string {
+  return join(fields);
+}
+
+/** One set as text: "10 × 135 lb", "12 reps", "8 × 145 lb (Failure)". */
+function setText(s: ExerciseSet): string {
+  const base = s.weight != null ? `${s.reps} × ${s.weight} lb` : `${s.reps} reps`;
+  return base + (s.failure ? ' (Failure)' : s.easy ? ' (Easy)' : '');
+}
+
+/**
+ * A note recording the details a type change removes, so nothing is truly lost,
+ * e.g. "Changed from Workout: Push day. Bench Press (setting 4): 10 × 135 lb, 8 × 145 lb."
+ * Null when there's nothing to keep.
+ */
+export function describeDropped(entry: Entry): string | null {
+  if (!droppedFields(entry).length) return null;
+  const from = `Changed from ${entryLabel(entry)}: `;
+  switch (entry.type) {
+    case 'workout': {
+      const parts = [
+        ...(entry.name ? [entry.name] : []),
+        ...entry.exercises.map((x) => {
+          const sets = x.steps.filter((s): s is ExerciseSet => s.type === 'set').map(setText);
+          const setting = x.machineSetting != null ? ` (setting ${x.machineSetting})` : '';
+          return `${x.name}${setting}${sets.length ? `: ${sets.join(', ')}` : ''}`;
+        }),
+      ];
+      return from + parts.join('. ') + '.';
+    }
+    case 'move':
+      return (
+        from +
+        [
+          ...(entry.distance != null ? [formatDistance(entry.distance)] : []),
+          ...(entry.durationMinutes != null ? [formatDuration(entry.durationMinutes)] : []),
+          ...(entry.location ? [entry.location] : []),
+        ].join(' · ')
+      );
+    case 'weigh-in':
+      return `${from}${entry.weight} lb`;
+    case 'sport':
+      return (
+        from +
+        [
+          ...(entry.format ? [GOLF_FORMAT_LABELS[entry.format]] : []),
+          ...(entry.score != null ? [`Score ${entry.score}`] : []),
+        ].join(' · ')
+      );
+  }
+}
 
 // ---- Helpers ----
 

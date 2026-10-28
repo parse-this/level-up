@@ -2,20 +2,13 @@ import { Component, LOCALE_ID, inject } from '@angular/core';
 import { formatDate } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import {
-  ACTIVITIES,
-  ACTIVITY_LABELS,
-  Activity,
   Entry,
+  EntryTypeInit,
   GOLF_FORMAT_LABELS,
   NewEntry,
-  SPORTS,
-  SPORT_ICONS,
-  SPORT_LABELS,
-  Sport,
   countSets,
   entryIcon,
   entryLabel,
@@ -24,13 +17,14 @@ import {
   today,
 } from '../entry';
 import { EntryStore } from '../entry.store';
+import { EntryTypeMenu } from '../entry-type-menu/entry-type-menu';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** The Training Ground log: all entries, newest first, plus "New entry". */
 @Component({
   selector: 'app-entry-list',
-  imports: [RouterLink, MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, EntryTypeMenu],
   templateUrl: './entry-list.html',
   styleUrl: './entry-list.scss',
 })
@@ -39,28 +33,12 @@ export class EntryList {
   private readonly router = inject(Router);
   private readonly locale = inject(LOCALE_ID);
 
-  protected readonly activities = ACTIVITIES;
-  protected readonly activityLabels = ACTIVITY_LABELS;
-  protected readonly sports = SPORTS;
-  protected readonly sportLabels = SPORT_LABELS;
-  protected readonly sportIcons = SPORT_ICONS;
   protected readonly icon = entryIcon;
   protected readonly label = entryLabel;
 
-  protected newWorkout(): void {
-    this.open({ type: 'workout', date: today(), exercises: [] });
-  }
-
-  protected newMove(activity: Activity): void {
-    this.open({ type: 'move', date: today(), activity });
-  }
-
-  protected newWeighIn(): void {
-    this.open({ type: 'weigh-in', date: today() });
-  }
-
-  protected newSport(sport: Sport): void {
-    this.open({ type: 'sport', date: today(), sport });
+  /** Creates an entry of the picked type, dated today, and opens it. */
+  protected newEntry(init: EntryTypeInit): void {
+    this.open({ ...init, date: today() } as NewEntry);
   }
 
   /** Workout title is its name if set; otherwise the type label. */

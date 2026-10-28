@@ -129,6 +129,26 @@ describe('computeProgress', () => {
     expect(p.totalXp).toBe(1); // just the day-1 streak bonus: being in the app still counts as active
   });
 
+  it('keeps XP when a backdated workout is changed to golf in place (same createdAt)', () => {
+    // Logged on Oct 2, dated Oct 1 (yesterday: backfill allowed).
+    const workout: Entry = {
+      id: 'w',
+      type: 'workout',
+      date: '2026-10-01',
+      createdAt: at('2026-10-02'),
+      name: 'Range',
+      exercises: [],
+    };
+    const before = computeProgress([workout], [], '2026-10-02');
+    expect(before.sources.session.count).toBe(1);
+    const golf: Entry = { id: 'w', type: 'sport', sport: 'golf', format: 'practice', date: '2026-10-01', createdAt: workout.createdAt };
+    expect(computeProgress([golf], [], '2026-10-02')).toEqual(before);
+
+    // Deleting and recreating it days later would lose the session XP (backdated > 1 day).
+    const recreated: Entry = { ...golf, createdAt: at('2026-10-05') };
+    expect(computeProgress([recreated], [], '2026-10-05').sources.session.count).toBe(0);
+  });
+
   it('counts a golf session once its type is picked', () => {
     const golf = (format?: 'practice' | '18-holes'): Entry => ({
       id: `g${n++}`,

@@ -1,35 +1,8 @@
-<button matButton="filled" type="button" class="new-entry" [matMenuTriggerFor]="newMenu">
+<button matButton="filled" type="button" class="new-entry" [matMenuTriggerFor]="newMenu.menu()">
   <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
   New entry
 </button>
-
-<mat-menu #newMenu="matMenu">
-  <button mat-menu-item type="button" (click)="newWorkout()">
-    <mat-icon fontSet="material-symbols-outlined">fitness_center</mat-icon>
-    <span>Workout</span>
-  </button>
-  <mat-divider />
-  <div class="menu-heading" aria-hidden="true">Get Moving</div>
-  @for (a of activities; track a) {
-    <button mat-menu-item type="button" (click)="newMove(a)">
-      <mat-icon fontSet="material-symbols-outlined">directions_{{ a }}</mat-icon>
-      <span>{{ activityLabels[a] }}</span>
-    </button>
-  }
-  <mat-divider />
-  <div class="menu-heading" aria-hidden="true">Sport</div>
-  @for (s of sports; track s) {
-    <button mat-menu-item type="button" (click)="newSport(s)">
-      <mat-icon fontSet="material-symbols-outlined">{{ sportIcons[s] }}</mat-icon>
-      <span>{{ sportLabels[s] }}</span>
-    </button>
-  }
-  <mat-divider />
-  <button mat-menu-item type="button" (click)="newWeighIn()">
-    <mat-icon fontSet="material-symbols-outlined">monitor_weight</mat-icon>
-    <span>Weigh-in</span>
-  </button>
-</mat-menu>
+<app-entry-type-menu #newMenu (picked)="newEntry($event)" />
 
 <nav class="entry-list" aria-label="Log">
   @for (e of store.entries(); track e.id) {

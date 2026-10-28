@@ -7,17 +7,26 @@ import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatRippleModule } from '@angular/material/core';
+import { MatMenuModule } from '@angular/material/menu';
+import { EntryTypeMenu } from '../entry-type-menu/entry-type-menu';
 import { BackRail } from '../../core/back-rail';
 import { ConfirmService } from '../../core/confirm-dialog';
 import { HasUnsavedChanges } from '../../core/unsaved-changes.guard';
 import {
   Entry,
+  EntryTypeInit,
   MoveEntry,
   SportEntry,
   WeighInEntry,
   WorkoutEntry,
+  describeDropped,
+  describeFields,
+  droppedFields,
   entryIcon,
   entryLabel,
+  isSameKind,
+  typeLabel,
 } from '../entry';
 import { SportDetail } from '../sport-detail/sport-detail';
 import { EntryStore } from '../entry.store';
@@ -33,6 +42,9 @@ import { WorkoutDetail } from '../workout-detail/workout-detail';
   selector: 'app-entry-detail',
   imports: [
     BackRail,
+    EntryTypeMenu,
+    MatMenuModule,
+    MatRippleModule,
     ReactiveFormsModule,
     TextFieldModule,
     MatFormFieldModule,
@@ -51,10 +63,20 @@ import { WorkoutDetail } from '../workout-detail/workout-detail';
       <div class="content">
         @if (entry(); as e) {
           <div class="heading-row">
+            <!-- Tap the heading to change the entry's type (same choices as New entry). -->
             <h2 class="entry-heading">
-              <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{ icon(e) }}</mat-icon>
-              {{ label(e) }}
+              <button
+                type="button"
+                class="type-button"
+                matRipple
+                [matMenuTriggerFor]="typeMenu.menu()"
+                [attr.aria-label]="label(e) + '. Change type'"
+              >
+                <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{ icon(e) }}</mat-icon>
+                {{ label(e) }}
+              </button>
             </h2>
+            <app-entry-type-menu #typeMenu [current]="e" (picked)="changeType($event)" />
             <button matIconButton type="button" (click)="remove()" aria-label="Delete entry">
               <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
             </button>
@@ -117,11 +139,40 @@ import { WorkoutDetail } from '../workout-detail/workout-detail';
     }
 
     .entry-heading {
-      display: flex;
+      margin: 0;
+      font: var(--mat-sys-headline-small);
+    }
+
+    .type-button {
+      display: inline-flex;
       align-items: center;
       gap: 8px;
-      font: var(--mat-sys-headline-small);
-      margin: 0;
+      margin-left: -8px;
+      padding: 4px 8px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      overflow: hidden;
+
+      // ▾ drawn in CSS so it isn't part of the heading's text.
+      &::after {
+        content: '';
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid var(--mat-sys-on-surface-variant);
+        margin-left: 2px;
+      }
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+      }
     }
 
     .empty {
@@ -193,6 +244,44 @@ export class EntryDetail implements HasUnsavedChanges {
   }
 
   /** Back to the log (everything is already saved; unsaved exercise forms still ask first). */
+  /**
+   * Changes this entry's type in place, keeping its date, creation time (so its XP timing)
+   * and notes. Asks first if details would be removed; those are copied into the notes.
+   */
+  protected async changeType(next: EntryTypeInit): Promise<void> {
+    const e = this.entry();
+    if (!e || isSameKind(e, next)) return;
+
+    // Walk ↔ Run ↔ Bike: just the activity; distance, time and location stay.
+    if (e.type === 'move' && next.type === 'move') {
+      this.store.replace({ ...e, activity: next.activity });
+      return;
+    }
+
+    if (this.hasUnsavedChanges()) {
+      const discard = await this.confirmService.confirm({
+        title: 'Discard unsaved exercises?',
+        message: "Exercises you haven't saved will be lost.",
+        confirmLabel: 'Discard',
+      });
+      if (!discard) return;
+    }
+
+    const fields = droppedFields(e);
+    if (fields.length) {
+      const ok = await this.confirmService.confirm({
+        title: `Change to ${typeLabel(next)}?`,
+        message: `This ${entryLabel(e).toLowerCase()}'s ${describeFields(fields)} will be removed. They'll be copied into its notes.`,
+        confirmLabel: 'Change',
+      });
+      if (!ok) return;
+    }
+
+    this.store.changeType(e.id, next, describeDropped(e) ?? undefined);
+    // The notes box loads once per entry; show the copied details right away.
+    this.notes.setValue(this.store.byId(e.id)?.notes ?? '', { emitEvent: false });
+  }
+
   protected done(): void {
     this.router.navigate(['/training']);
   }

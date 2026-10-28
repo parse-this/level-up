@@ -2,13 +2,6 @@
   margin-bottom: 24px;
 }
 
-// Menu content renders in an overlay but comes from this template, so these styles still apply.
-.menu-heading {
-  font: var(--mat-sys-label-medium);
-  color: var(--mat-sys-on-surface-variant);
-  padding: 8px 16px 0;
-}
-
 .entry-list {
   display: flex;
   flex-direction: column;

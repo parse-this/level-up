@@ -193,6 +193,93 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
       await stable();
     });
 
+    describe('changing type from the heading', () => {
+      const menuItems = () =>
+        Array.from(document.querySelectorAll<HTMLElement>('.type-option')).map((i) => ({
+          el: i,
+          label: i.querySelector('span')?.textContent?.trim(),
+          current: i.classList.contains('current'),
+        }));
+      const pickType = async (label: string, stable: () => Promise<unknown>) => {
+        menuItems().find((i) => i.label === label)!.el.click();
+        await stable();
+      };
+
+      it('shows the same choices as New entry, with the current type marked', async () => {
+        const w = store().create({ type: 'workout', date: '2026-10-01', exercises: [] });
+        const { click } = await open(`/training/${w.id}`);
+        await click('.type-button');
+        expect(menuItems().map((i) => [i.label, i.current])).toEqual([
+          ['Workout', true],
+          ['Walk', false],
+          ['Run', false],
+          ['Bike', false],
+          ['Golf', false],
+          ['Weigh-in', false],
+        ]);
+      });
+
+      it('workout → golf: asks first, keeps the entry, copies the removed details into notes', async () => {
+        const w = store().create({ type: 'workout', date: '2026-10-01', name: 'Range day', exercises: [], notes: 'Sunny' });
+        store().addExercise(w.id, { name: 'Driver', steps: [{ type: 'set', reps: 30, failure: false, easy: false }] });
+        const { el, text, click, stable } = await open(`/training/${w.id}`);
+
+        await click('.type-button');
+        await pickType('Golf', stable);
+        await vi.waitFor(() => expect(dialog().title).toBe('Change to Golf?'));
+        expect(dialog().message).toBe(
+          "This workout's name and 1 exercise will be removed. They'll be copied into its notes.",
+        );
+        dialog().button('Change').click();
+        await vi.waitFor(() => expect(store().byId(w.id)?.type).toBe('sport'));
+        await stable();
+
+        expect(store().byId(w.id)).toMatchObject({
+          id: w.id,
+          type: 'sport',
+          sport: 'golf',
+          date: '2026-10-01',
+          createdAt: w.createdAt,
+          notes: 'Sunny\n\nChanged from Workout: Range day. Driver: 30 reps.',
+        });
+        expect(url()).toBe(`/training/${w.id}`);
+        expect(text('.entry-heading')).toEqual(['golf_course Golf']);
+        expect(el().querySelector('app-sport-detail')).toBeTruthy();
+        expect(el().querySelector<HTMLTextAreaElement>('.entry-notes textarea')!.value).toContain('Changed from Workout');
+      });
+
+      it('Cancel leaves the entry as it was', async () => {
+        const i = store().create({ type: 'weigh-in', date: '2026-10-01', weight: 180 });
+        const { click, stable } = await open(`/training/${i.id}`);
+        await click('.type-button');
+        await pickType('Workout', stable);
+        await vi.waitFor(() => expect(dialog().title).toBe('Change to Workout?'));
+        dialog().button('Cancel').click();
+        await stable();
+        expect(store().byId(i.id)).toMatchObject({ type: 'weigh-in', weight: 180 });
+      });
+
+      it('switches straight away when nothing would be lost', async () => {
+        const i = store().create({ type: 'weigh-in', date: '2026-10-01' });
+        const { click, stable } = await open(`/training/${i.id}`);
+        await click('.type-button');
+        await pickType('Golf', stable);
+        expect(document.querySelector('mat-dialog-container')).toBeNull();
+        expect(store().byId(i.id)).toMatchObject({ type: 'sport', sport: 'golf' });
+        expect('notes' in store().byId(i.id)!).toBe(false);
+      });
+
+      it('Walk → Run keeps distance, time and place, and the activity buttons follow', async () => {
+        const m = store().create({ type: 'move', date: '2026-10-01', activity: 'walk', distance: 2, location: 'Park' });
+        const { el, text, click, stable } = await open(`/training/${m.id}`);
+        await click('.type-button');
+        await pickType('Run', stable);
+        expect(store().byId(m.id)).toMatchObject({ type: 'move', activity: 'run', distance: 2, location: 'Park' });
+        expect(text('.entry-heading')).toEqual(['directions_run Run']);
+        expect(el().querySelector('.mat-button-toggle-checked')?.textContent?.trim()).toBe('Run');
+      });
+    });
+
     describe('notes and Done (every entry type)', () => {
       it('saves entry notes as you type (trimmed; blank removes them) and shows them in the log', async () => {
         const w = store().create({ type: 'workout', date: '2026-10-01', exercises: [] });

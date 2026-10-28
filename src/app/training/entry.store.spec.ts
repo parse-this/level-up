@@ -3,6 +3,9 @@ import {
   Entry,
   ExerciseInput,
   WorkoutEntry,
+  ENTRY_TYPE_OPTIONS,
+  describeDropped,
+  droppedFields,
   formatDistance,
   formatDuration,
   matchNames,
@@ -179,6 +182,83 @@ describe('EntryStore', () => {
     localStorage.setItem(ENTRIES_KEY, '{not json');
     vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(create().entries()).toEqual([]);
+  });
+});
+
+describe('changing entry type', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('keeps id, date, createdAt and notes, drops the old type, and appends the given note', () => {
+    const store = TestBed.inject(EntryStore);
+    const w = store.create({ type: 'workout', date: '2026-10-20', name: 'Range', exercises: [], notes: 'Sunny' });
+    store.changeType(w.id, { type: 'sport', sport: 'golf' }, 'Changed from Workout: Range.');
+    expect(store.byId(w.id)).toEqual({
+      id: w.id,
+      date: '2026-10-20',
+      createdAt: w.createdAt,
+      type: 'sport',
+      sport: 'golf',
+      notes: 'Sunny\n\nChanged from Workout: Range.',
+    });
+  });
+
+  it('lists what a change would remove', () => {
+    const base = { id: 'x', date: '2026-10-01', createdAt: '2026-10-01T12:00:00Z' };
+    expect(droppedFields({ ...base, type: 'workout', exercises: [] })).toEqual([]);
+    expect(
+      droppedFields({ ...base, type: 'workout', name: 'Push', exercises: [{ ...bench, id: 'e' }, { ...bench, id: 'f' }] }),
+    ).toEqual(['name', '2 exercises']);
+    expect(droppedFields({ ...base, type: 'move', activity: 'run', distance: 3, location: 'Park' })).toEqual([
+      'distance',
+      'location',
+    ]);
+    expect(droppedFields({ ...base, type: 'weigh-in' })).toEqual([]);
+    expect(droppedFields({ ...base, type: 'sport', sport: 'golf', format: '18-holes', score: 90 })).toEqual([
+      'type',
+      'score',
+    ]);
+  });
+
+  it('describes removed details as a note', () => {
+    const base = { id: 'x', date: '2026-10-01', createdAt: '2026-10-01T12:00:00Z' };
+    expect(
+      describeDropped({
+        ...base,
+        type: 'workout',
+        name: 'Range day',
+        exercises: [
+          {
+            id: 'e',
+            name: 'Driver',
+            machineSetting: 4,
+            steps: [
+              { type: 'set', reps: 10, weight: 135, failure: false, easy: false },
+              { type: 'rest', minutes: 2 },
+              { type: 'set', reps: 8, failure: true, easy: false },
+            ],
+          },
+        ],
+      }),
+    ).toBe('Changed from Workout: Range day. Driver (setting 4): 10 × 135 lb, 8 reps (Failure).');
+    expect(describeDropped({ ...base, type: 'move', activity: 'run', distance: 3.1, durationMinutes: 28 })).toBe(
+      'Changed from Run: 3.1 mi · 28 min',
+    );
+    expect(describeDropped({ ...base, type: 'weigh-in', weight: 181 })).toBe('Changed from Weigh-in: 181 lb');
+    expect(describeDropped({ ...base, type: 'sport', sport: 'golf', format: '9-holes', score: 45 })).toBe(
+      'Changed from Golf: 9 holes · Score 45',
+    );
+    expect(describeDropped({ ...base, type: 'weigh-in' })).toBeNull();
+  });
+
+  it('offers the same menu for New entry and Change type', () => {
+    expect(ENTRY_TYPE_OPTIONS.map((o) => [o.group ?? '', o.label])).toEqual([
+      ['', 'Workout'],
+      ['Get Moving', 'Walk'],
+      ['Get Moving', 'Run'],
+      ['Get Moving', 'Bike'],
+      ['Sport', 'Golf'],
+      ['', 'Weigh-in'],
+    ]);
   });
 });
 

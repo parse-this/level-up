@@ -113,6 +113,13 @@ export class MoveDetail {
 
   constructor() {
     // Load the form once per entry, so saving doesn't overwrite what's being typed.
+    // The activity can also change from outside (the heading's Change type menu): follow it.
+    effect(() => {
+      const activity = this.entry().activity;
+      const control = this.form.controls.activity;
+      if (control.value !== activity) control.setValue(activity, { emitEvent: false });
+    });
+
     effect(() => {
       this.entryId();
       const e = untracked(this.entry);

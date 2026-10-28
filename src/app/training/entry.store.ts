@@ -1,6 +1,14 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { StorageService } from '../core/storage.service';
-import { Entry, Exercise, ExerciseInput, NewEntry, PreviousExercise, WorkoutEntry } from './entry';
+import {
+  Entry,
+  EntryTypeInit,
+  Exercise,
+  ExerciseInput,
+  NewEntry,
+  PreviousExercise,
+  WorkoutEntry,
+} from './entry';
 
 export const ENTRIES_KEY = 'levelUpTracker.training.entries';
 
@@ -94,6 +102,19 @@ export class EntryStore {
 
   remove(id: string): void {
     this.commit(this.all().filter((e) => e.id !== id));
+  }
+
+  /**
+   * Same entry, new type. Keeps the shared fields (id, date, createdAt, notes), so its
+   * place in the log and its XP timing stay; the old type's own fields are dropped.
+   * `extraNote` (e.g. a summary of what was dropped) is added to the notes.
+   */
+  changeType(id: string, next: EntryTypeInit, extraNote?: string): void {
+    const old = this.byId(id);
+    if (!old) return;
+    const { date, createdAt, notes } = old;
+    const merged = [notes, extraNote].filter(Boolean).join('\n\n');
+    this.replace({ ...next, id, date, createdAt, ...(merged ? { notes: merged } : {}) } as Entry);
   }
 
   addExercise(workoutId: string, input: ExerciseInput): void {

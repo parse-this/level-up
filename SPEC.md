@@ -34,7 +34,7 @@ ng add @angular/material
 - `mat-toolbar` bg `--mat-sys-surface-container` (min-height 64px, 56px phone; padding includes safe-area insets): `.app-title` = mushroom-green.png (left; 32px, decorative `alt=""`) + `.title-word` "Level Up" (no "Tracker"), flex gap 8px, all screen sizes; phones: title-medium, nowrap, gap 6px, icon 28px. Spacer; `PlayerStatus`; desktop-only settings gear `matIconButton` → `/settings` (aria "Settings"; primary when active).
 - **Names:** features are shown as **Training Ground** (code: `training/`, `Training`, `EntryStore`) and **Quest Log** (code: `quests/`, `Quests`, `Quest`/`QuestStore`). Code names describe what things are, so display names can change without renames.
 - Desktop nav: `mat-tab-nav-bar` under toolbar, tabs "Training Ground", "Quest Log".
-- Phone nav: fixed `nav.bottom-nav` (aria "Main"), height 64px + bottom safe-area, bg surface-container, top border outline-variant; items Training Ground (`fitness_center`), Quest Log (`menu_book`), Settings (`settings`): icon + label-medium, muted; active primary.
+- Phone nav: fixed `nav.bottom-nav` (aria "Main"), height 64px + bottom safe-area, bg surface-container, top border outline-variant; items Training Ground (`fitness_center`), Quest Log (`menu_book`), Settings (`settings`): icon inside `.indicator` pill (56×30px, radius 15px) + label-medium, muted. Active (`aria-current=page`): pill bg secondary-container / icon on-secondary-container, label on-surface bold.
 - `main`: max-width 960px, centered, padding 24px 16px (phone: 16px, bottom padding clears the bottom nav); contains `router-outlet`.
 - Number inputs use `inputmode` (`decimal` for weight/distance, `numeric` for hours/minutes) for phone keypads.
 - Icons: `mat-icon fontSet="material-symbols-outlined"` (font linked in `index.html`).
@@ -64,6 +64,7 @@ src/app/
   training/move-detail/             MoveDetail (Get Moving)
   training/weigh-in-detail/         WeighInDetail
   training/sport-detail/            SportDetail (golf)
+  training/entry-type-menu/         EntryTypeMenu (shared New entry / Change type menu)
   training/exercise-form/           ExerciseForm
   training/exercise-card/           ExerciseCard (read-only exercise summary)
   quests/quests.ts         shell: header + router-outlet
@@ -111,12 +112,14 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 #### Data (`entry.ts`)
 - `MAX_REPS = 15`; `REST_MINUTES = [1,2,3,4,5,10,15,20,25,30]`; `MAX_MACHINE_SETTING = 10`.
 - Workout pieces: `ExerciseSet` (`type:'set'`, `reps`, `weight?` lb, `failure`, `easy`); `Rest` (`type:'rest'`, `minutes`); `Step` = union. `Exercise`: `id`, `name`, `machineSetting?` (0..10), `steps` (ordered; trailing rest = rest before next exercise), `notes?`, `loggedAt?` (ISO, set when added; kept on update; missing on older data). `ExerciseInput` = minus `id`, `loggedAt`.
-- Entry base: `id`, `date` (`YYYY-MM-DD`), `createdAt` (ISO, set on create; for time-of-day analysis later), `notes?` (plain text, trimmed; whole-entry notes, separate from exercise notes).
+- `EntryBase` (exported; kept on type change): `id`, `date` (`YYYY-MM-DD`), `createdAt` (ISO, set on create; for time-of-day analysis later), `notes?` (plain text, trimmed; whole-entry notes, separate from exercise notes).
   - `WorkoutEntry`: `type:'workout'`, `name?`, `exercises` (performed order).
   - `MoveEntry`: `type:'move'`, `activity` (`ACTIVITIES = walk|run|bike`, labels Walk/Run/Bike), `location?`, `durationMinutes?`, `distance?` (mi).
   - `WeighInEntry`: `type:'weigh-in'`, `weight?` (lb; missing until entered).
   - `SportEntry`: `type:'sport'`, `sport` (`SPORTS = golf`; labels Golf; icons `golf_course`), `format?` (`GOLF_FORMATS = practice|9-holes|18-holes`, labels Practice / 9 holes / 18 holes; missing until picked), `score?` (whole ≥1; only kept for 9/18 holes).
-  - `Entry` = union; `NewEntry` = Entry minus `id`, `createdAt` (distributive).
+  - `Entry` = discriminated union on `type`; `NewEntry` = Entry minus `id`, `createdAt` (distributive); `EntryTypeInit` = Entry minus `EntryBase` keys (a type's blank fields, e.g. `{type:'sport', sport:'golf'}`).
+  - `ENTRY_TYPE_OPTIONS`: `{label, icon, group?, init}` in menu order Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in. `isSameKind(entry|init, init)` (same type and activity/sport), `typeLabel(init)`.
+  - Type change helpers: `droppedFields(entry)` (workout: "name", "N exercise(s)"; move: distance/time/location; weigh-in: weight; golf: type/score; only those set), `describeFields` ("a, b and c"), `describeDropped(entry)` → note "Changed from <label>: …" (workout: "Name. Exercise (setting S): 10 × 135 lb, 8 reps (Failure)."; move: "3.1 mi · 28 min · Place"; weigh-in: "181 lb"; golf: "9 holes · Score 45") or null.
 - `matchNames(names, query, limit = 8)` (exercise and workout names): words = lowercase split on non-alphanumerics; keep names where every typed word is a prefix of some name word ("be pr" → "Bench Press"); skip exact (case-insensitive) match; keep input order; empty query → first `limit`.
 - Helpers: `stepLabels` ("Set 1", "Rest 1", "Set 2"…), `countSets`, `totalRest`, `formatDuration` ("45 min", "1 h", "1 h 5 min"), `formatDistance` ("3.1 mi", ≤2 decimals), `entryLabel` (Workout / Walk|Run|Bike / Weigh-in / Golf), `entryIcon` (`fitness_center`, `directions_<activity>`, `monitor_weight`, `golf_course`), `today()`.
 
@@ -128,11 +131,12 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 - `lastWorkoutNamed(name, excludeId)`: most recent other workout with that name (trimmed, case-insensitive); none for blank.
 - `latestExercise(name)` → `PreviousExercise {exercise, date}` (workout date): most recent exercise with that name (trimmed, case-insensitive), scanning entries newest first; within a workout, the later exercise wins.
 - `create(NewEntry)` → adds `id`, `createdAt`; `replace(entry)`; `remove(id)`.
+- `changeType(id, next: EntryTypeInit, extraNote?)`: keeps id/date/createdAt (so log position and XP timing stay), notes + extraNote joined by a blank line; old type's fields dropped.
 - Workout exercises: `addExercise(id, input)` (appends, stamps `loggedAt`), `updateExercise(id, exerciseId, input)` (keeps `loggedAt`), `removeExercise(id, exerciseId)`.
 - Each change saves. Loads from entries key (empty if missing).
 
 #### `EntryList` (log)
-- "New entry" (filled, add icon) opens `mat-menu`: Workout (fitness_center) | divider, muted heading "Get Moving", Walk / Run / Bike (directions_*) | divider, muted heading "Sport", Golf (golf_course) | divider, Weigh-in (monitor_weight). Each creates entry dated today (Get Moving with chosen activity; Sport with chosen sport) and navigates to it.
+- "New entry" (filled, add icon) opens the shared `EntryTypeMenu` (`[matMenuTriggerFor]="menu.menu()"`; groups get a divider + muted heading; current type marked with check + primary when given): Workout (fitness_center) | divider, muted heading "Get Moving", Walk / Run / Bike (directions_*) | divider, muted heading "Sport", Golf (golf_course) | divider, Weigh-in (monitor_weight). Each creates entry dated today (Get Moving with chosen activity; Sport with chosen sport) and navigates to it.
 - `nav` of `a.entry` rows, sorted as store: type icon (primary color), title, meta, chevron_right. Hover bg `surface-container`.
   - Title: workout name, else `entryLabel`.
   - Meta (" · "-joined): date `EEE, MMM d, y`, then — Workout: "N exercise(s) · M set(s)"; Get Moving: distance, duration, location (each if set); Weigh-in: "W lb" or "No weight yet"; Golf: format label or "Not set up yet", then "Score S" if set.
@@ -143,7 +147,8 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 #### `EntryDetail` (frame)
 - Layout: grid `56px | 1fr`, gap 16px (phone `40px | 1fr`, gap 12px). Left: `<app-back-rail link="/training" label="All entries">`.
 - `BackRail` (`core/back-rail.ts`, inputs `link`, `label`): full-height link (`matRipple`, aria-label = label; border outline-variant, radius 12px, bg surface-container-low, muted text; hover bg surface-container-high + primary text; focus outline primary; `overflow: clip`, not `hidden`, which would break sticky). Inside (column, centered, gap 4px, padding 12px 2px): arrow_back icon + label with one word per line (label-medium, centered, aria-hidden; hidden on phones); `position: sticky; top: 16px` so it follows the page while scrolling.
-- Right: heading row = heading (headline-small: type icon + `entryLabel`) + delete icon button (right); then body.
+- Right: heading row = h2 containing `.type-button` (icon + `entryLabel` + CSS ▾; `matRipple`; aria "<label>. Change type") opening `EntryTypeMenu [current]=entry` + delete icon button (right); then body.
+- Change type: same kind → nothing; Walk↔Run↔Bike → only `activity` changes (details kept, `MoveDetail` follows the activity via an effect); otherwise unsaved exercise forms → "Discard unsaved exercises?"; if `droppedFields` non-empty → confirm "Change to <Type>?" / "This <label>'s <fields> will be removed. They'll be copied into its notes." / "Change"; then `store.changeType(id, next, describeDropped(entry))` and the notes box is refreshed.
 - Body by type: `WorkoutDetail` / `MoveDetail` / `WeighInDetail` / `SportDetail` (`[entry]` input).
 - Below the body (every type): `.entry-notes` "Notes" textarea (`cdkTextareaAutosize`, rows 3; loaded once per id; saves on each change: trimmed, blank → omitted), then `.footer` (right-aligned): muted "Saves automatically" (`cloud_done`) + filled "Done" (`check`) → `/training` (unsaved-exercise guard still applies).
 - Type detail forms that rebuild the entry (Move, Weigh-in, Sport) carry `notes` from the current entry so they never drop it.
