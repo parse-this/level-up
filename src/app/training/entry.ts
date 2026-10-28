@@ -313,6 +313,46 @@ export function matchNames(names: readonly string[], query: string, limit = 8): 
     .slice(0, limit);
 }
 
+export type DayGroupKey = 'upcoming' | 'today' | 'yesterday' | 'earlier';
+export const DAY_GROUP_LABELS: Record<DayGroupKey, string> = {
+  upcoming: 'Upcoming',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  earlier: 'Earlier',
+};
+
+export interface DayGroup<T> {
+  key: DayGroupKey;
+  label: string;
+  items: T[];
+}
+
+/** The `YYYY-MM-DD` before a `YYYY-MM-DD` (local calendar). */
+function dayBefore(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  const prev = new Date(y, m - 1, d - 1);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${prev.getFullYear()}-${pad(prev.getMonth() + 1)}-${pad(prev.getDate())}`;
+}
+
+/**
+ * Splits items (already sorted newest date first) into Upcoming (future dates), Today,
+ * Yesterday and Earlier, by their `date` relative to `todayDate`. Empty groups are left out.
+ */
+export function groupByDay<T extends { date: string }>(items: readonly T[], todayDate: string): DayGroup<T>[] {
+  const yesterday = dayBefore(todayDate);
+  const keyFor = (date: string): DayGroupKey =>
+    date > todayDate ? 'upcoming' : date === todayDate ? 'today' : date === yesterday ? 'yesterday' : 'earlier';
+  const groups = new Map<DayGroupKey, T[]>();
+  for (const item of items) {
+    const key = keyFor(item.date);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return (['upcoming', 'today', 'yesterday', 'earlier'] as const)
+    .filter((key) => groups.has(key))
+    .map((key) => ({ key, label: DAY_GROUP_LABELS[key], items: groups.get(key)! }));
+}
+
 /** Today's local date as `YYYY-MM-DD`. */
 export function today(): string {
   const d = new Date();

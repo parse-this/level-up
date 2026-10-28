@@ -121,6 +121,7 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
   - `ENTRY_TYPE_OPTIONS`: `{label, icon, group?, init}` in menu order Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in. `isSameKind(entry|init, init)` (same type and activity/sport), `typeLabel(init)`.
   - Type change helpers: `droppedFields(entry)` (workout: "name", "N exercise(s)"; move: distance/time/location; weigh-in: weight; golf: type/score; only those set), `describeFields` ("a, b and c"), `describeDropped(entry)` → note "Changed from <label>: …" (workout: "Name. Exercise (setting S): 10 × 135 lb, 8 reps (Failure)."; move: "3.1 mi · 28 min · Place"; weigh-in: "181 lb"; golf: "9 holes · Score 45") or null.
 - `matchNames(names, query, limit = 8)` (exercise and workout names): words = lowercase split on non-alphanumerics; keep names where every typed word is a prefix of some name word ("be pr" → "Bench Press"); skip exact (case-insensitive) match; keep input order; empty query → first `limit`.
+- `groupByDay(items, todayDate)` → `{key, label, items}[]` (future → Upcoming, = today → Today, day before → Yesterday, older → Earlier; keeps input order; empty groups left out).
 - Helpers: `stepLabels` ("Set 1", "Rest 1", "Set 2"…), `countSets`, `totalRest`, `formatDuration` ("45 min", "1 h", "1 h 5 min"), `formatDistance` ("3.1 mi", ≤2 decimals), `entryLabel` (Workout / Walk|Run|Bike / Weigh-in / Golf), `entryIcon` (`fitness_center`, `directions_<activity>`, `monitor_weight`, `golf_course`), `today()`.
 
 #### `EntryStore` (root)
@@ -137,7 +138,7 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 
 #### `EntryList` (log)
 - "New entry" (filled, add icon) opens the shared `EntryTypeMenu` (`[matMenuTriggerFor]="menu.menu()"`; groups get a divider + muted heading; current type marked with check + primary when given): Workout (fitness_center) | divider, muted heading "Get Moving", Walk / Run / Bike (directions_*) | divider, muted heading "Sport", Golf (golf_course) | divider, Weigh-in (monitor_weight). Each creates entry dated today (Get Moving with chosen activity; Sport with chosen sport) and navigates to it.
-- `nav` of `a.entry` rows, sorted as store: type icon (primary color), title, meta, chevron_right. Hover bg `surface-container`.
+- `nav.log` (gap 20px) of `section.day-group`s from `groupByDay(entries, today())`: `h3.group-title` (title-small, muted, uppercase, letter-spacing .8px) Upcoming / Today / Yesterday / Earlier (by entry `date`; empty groups omitted), then that group's `a.entry` rows, sorted as store: type icon (primary color), title, meta, chevron_right. Hover bg `surface-container`.
   - Title: workout name, else `entryLabel`.
   - Meta (" · "-joined): date `EEE, MMM d, y`, then — Workout: "N exercise(s) · M set(s)"; Get Moving: distance, duration, location (each if set); Weigh-in: "W lb" or "No weight yet"; Golf: format label or "Not set up yet", then "Score S" if set.
   - Workout: comma-separated exercise names (single line, ellipsis).
@@ -222,9 +223,9 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 
 #### `QuestList` (`quest-list/`)
 - Page = flex column. **Capture** card (`form.capture`): input "What's on your mind?" (aria "New quest", `enterkeyhint="done"`), row: `TagPicker [(selected)]`, importance outlined button cycling Normal → ⭐ → 🔥 (icon `label_important` when normal; label colored), spacer, "Add" (filled; disabled when blank). Enter/Add captures, resets tags + importance, refocuses input. Phones: capture moves below the list (`order: 99`), `position: sticky; bottom: 64px + safe-area + 8px`, shadow.
-- Filters: horizon `.choices` Inbox · Now · Soon · Someday · All with counts (default Inbox; counts within tag filter). Tag chips row (`.tag-chip`, pill, active = secondary-container; count within horizon; tap again clears) + "⋯" (`more_horiz`, aria "Manage tags") → `ManageTags` dialog. Row hidden when no tags.
+- Filters: horizon `.choices` **All** · Now · Soon · Someday with counts (All first and default; it includes unsorted Inbox quests — no Inbox tab; counts within tag filter). Quests still start with horizon `inbox`, and the quest page keeps Inbox as a "When" choice. Tag chips row (`.tag-chip`, pill, active = secondary-container; count within horizon; tap again clears) + "⋯" (`more_horiz`, aria "Manage tags") → `ManageTags` dialog. Row hidden when no tags.
 - Open quests list (aria "Open quests"): row (`.quest`, `.urgent` tint) = complete button (`radio_button_unchecked`, aria "Complete <title>"), link to `:id` with title + mini tag pills + `notes` icon if notes, importance icon (colored).
-- Empty: Inbox "Inbox empty. Mind clear!"; All "No open quests. Mind clear!"; else "Nothing in <Horizon> yet."; with tag "No open quests tagged <name>."
+- Empty: All "No open quests. Mind clear!"; else "Nothing in <Horizon> yet."; with tag "No open quests tagged <name>."
 - "Completed (N)" `mat-expansion-panel` (list aria "Completed quests"; collapsed; only if any match filters): reopen (`check_circle`, aria "Reopen <title>"), struck-through muted title link, delete (confirm "Delete quest?" / `"<title>" will be gone for good. This can't be undone.`).
 
 #### `TagPicker` (`tag-picker/`)

@@ -2,6 +2,20 @@
   margin-bottom: 24px;
 }
 
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.group-title {
+  margin: 0 0 8px;
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
 .entry-list {
   display: flex;
   flex-direction: column;

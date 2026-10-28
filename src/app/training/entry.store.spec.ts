@@ -7,6 +7,7 @@ import {
   describeDropped,
   droppedFields,
   formatDistance,
+  groupByDay,
   formatDuration,
   matchNames,
   stepLabels,
@@ -263,6 +264,18 @@ describe('changing entry type', () => {
 });
 
 describe('entry helpers', () => {
+  it('groups by day: Upcoming, Today, Yesterday, Earlier (empty groups left out)', () => {
+    const items = ['2026-11-02', '2026-11-01', '2026-11-01', '2026-10-30', '2026-09-01'].map((date, i) => ({ date, i }));
+    expect(groupByDay(items, '2026-11-01').map((g) => [g.label, g.items.map((x) => x.i)])).toEqual([
+      ['Upcoming', [0]],
+      ['Today', [1, 2]],
+      ['Earlier', [3, 4]],
+    ]);
+    // Yesterday across a month boundary.
+    expect(groupByDay([{ date: '2026-10-31' }], '2026-11-01').map((g) => g.label)).toEqual(['Yesterday']);
+    expect(groupByDay([], '2026-11-01')).toEqual([]);
+  });
+
   it('stepLabels numbers sets and rests separately, in order', () => {
     expect(
       stepLabels([{ type: 'set' }, { type: 'rest' }, { type: 'set' }, { type: 'rest' }]),

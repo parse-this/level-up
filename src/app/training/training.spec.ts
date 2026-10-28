@@ -64,6 +64,24 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
       expect(el().querySelector('app-feature-info [aria-label="Close"]')).toBeTruthy();
     });
 
+    it('groups the log under Today, Yesterday and Earlier', async () => {
+      /** Local `YYYY-MM-DD`, `offset` days from today. */
+      const day = (offset: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + offset);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+      store().create({ type: 'weigh-in', date: day(0), weight: 180 });
+      store().create({ type: 'weigh-in', date: day(-1), weight: 181 });
+      store().create({ type: 'weigh-in', date: day(-5), weight: 182 });
+      store().create({ type: 'weigh-in', date: day(-9), weight: 183 });
+      const { el, text } = await open('/training');
+      expect(text('.group-title')).toEqual(['Today', 'Yesterday', 'Earlier']);
+      const counts = Array.from(el().querySelectorAll('.day-group')).map((g) => g.querySelectorAll('.entry').length);
+      expect(counts).toEqual([1, 1, 2]);
+    });
+
     it('shows the header and empty state', async () => {
       const { text } = await open('/training');
       expect(text('h1 .page-subtitle')[0]).toMatch(/^— Raise your stats/);

@@ -4,27 +4,34 @@
 </button>
 <app-entry-type-menu #newMenu (picked)="newEntry($event)" />
 
-<nav class="entry-list" aria-label="Log">
-  @for (e of store.entries(); track e.id) {
-    @let names = exerciseNames(e);
-    <a class="entry" [routerLink]="['/training', e.id]">
-      <mat-icon class="entry-icon" fontSet="material-symbols-outlined" aria-hidden="true">{{
-        icon(e)
-      }}</mat-icon>
-      <div class="entry-main">
-        <div class="entry-title">
-          {{ title(e) }}
-          @if (e.notes) {
-            <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes">notes</mat-icon>
-          }
-        </div>
-        <div class="entry-meta">{{ meta(e) }}</div>
-        @if (names) {
-          <div class="entry-exercises">{{ names }}</div>
+<nav class="log" aria-label="Log">
+  @for (g of groups(); track g.key) {
+    <section class="day-group" [attr.aria-labelledby]="'group-' + g.key">
+      <h3 class="group-title" [id]="'group-' + g.key">{{ g.label }}</h3>
+      <div class="entry-list">
+        @for (e of g.items; track e.id) {
+          @let names = exerciseNames(e);
+          <a class="entry" [routerLink]="['/training', e.id]">
+            <mat-icon class="entry-icon" fontSet="material-symbols-outlined" aria-hidden="true">{{
+              icon(e)
+            }}</mat-icon>
+            <div class="entry-main">
+              <div class="entry-title">
+                {{ title(e) }}
+                @if (e.notes) {
+                  <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes">notes</mat-icon>
+                }
+              </div>
+              <div class="entry-meta">{{ meta(e) }}</div>
+              @if (names) {
+                <div class="entry-exercises">{{ names }}</div>
+              }
+            </div>
+            <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">chevron_right</mat-icon>
+          </a>
         }
       </div>
-      <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">chevron_right</mat-icon>
-    </a>
+    </section>
   } @empty {
     <p class="empty">Nothing logged yet. Press Start: tap "New entry".</p>
   }

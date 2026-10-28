@@ -1,4 +1,4 @@
-import { Component, LOCALE_ID, inject } from '@angular/core';
+import { Component, LOCALE_ID, computed, inject } from '@angular/core';
 import { formatDate } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,7 @@ import {
   entryLabel,
   formatDistance,
   formatDuration,
+  groupByDay,
   today,
 } from '../entry';
 import { EntryStore } from '../entry.store';
@@ -32,6 +33,9 @@ export class EntryList {
   protected readonly store = inject(EntryStore);
   private readonly router = inject(Router);
   private readonly locale = inject(LOCALE_ID);
+
+  /** Log grouped into Upcoming / Today / Yesterday / Earlier (by entry date). */
+  protected readonly groups = computed(() => groupByDay(this.store.entries(), today()));
 
   protected readonly icon = entryIcon;
   protected readonly label = entryLabel;
