@@ -47,6 +47,11 @@ export const routes: Routes = [
         loadComponent: () => import('./settings/settings-home').then((m) => m.SettingsHome),
       },
       {
+        path: 'font-style',
+        title: 'Font style | Level Up Tracker',
+        loadComponent: () => import('./settings/font-style').then((m) => m.FontStyle),
+      },
+      {
         path: 'about',
         title: 'About | Level Up Tracker',
         loadComponent: () => import('./settings/about').then((m) => m.About),

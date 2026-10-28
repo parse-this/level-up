@@ -24,18 +24,25 @@ describe('Settings', { timeout: 15_000 }, () => {
     return { harness, el, text };
   };
 
-  it('lists sections: About, Save & load game, View data, Credits', async () => {
+  it('lists sections: Font style (showing the current one), About, Save & load game, View data, Credits', async () => {
     const { el, text, harness } = await open('/settings');
     expect(text('h1')).toEqual(['Settings — Options menu']);
-    expect(text('nav.sections .section-title')).toEqual(['About', 'Save & load game', 'View data', 'Credits']);
+    expect(text('nav.sections .section-title')).toEqual([
+      'Font style',
+      'About',
+      'Save & load game',
+      'View data',
+      'Credits',
+    ]);
+    expect(text('nav.sections .section-description')[0]).toBe('Now: Exo 2');
 
-    el().querySelectorAll<HTMLElement>('nav.sections .section')[2].click();
+    el().querySelectorAll<HTMLElement>('nav.sections .section')[3].click();
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/settings/data');
   });
 
   it('Font style: defaults to Exo 2; picking one saves it and applies it to <html>', async () => {
-    const { el, text, harness } = await open('/settings');
+    const { el, text, harness } = await open('/settings/font-style');
     const html = document.documentElement;
     const radio = (id: string) => el().querySelector<HTMLInputElement>(`.font-option input[value="${id}"]`)!;
     expect(text('.font-sample-heading')).toEqual(['Exo 2', 'Orbitron + Roboto', 'Pixel + Chakra Petch', 'Pixel']);
@@ -52,7 +59,7 @@ describe('Settings', { timeout: 15_000 }, () => {
 
   it('Font style: a removed style (e.g. Classic) falls back to Exo 2', async () => {
     localStorage.setItem('levelUpTracker.settings.fontStyle', '"classic"');
-    const { el } = await open('/settings');
+    const { el } = await open('/settings/font-style');
     expect(el().querySelector<HTMLInputElement>('.font-option input[value="exo"]')!.checked).toBe(true);
   });
 

@@ -55,6 +55,11 @@
   .spacer {
     flex: 1;
   }
+
+  // Stays on the right, even when it wraps to its own line on narrow screens.
+  .add {
+    margin-left: auto;
+  }
 }
 
 .importance-toggle {

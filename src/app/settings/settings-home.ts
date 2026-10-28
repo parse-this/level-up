@@ -1,7 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatRadioModule } from '@angular/material/radio';
 import { FontStyleService } from '../core/font-style.service';
 
 interface SettingsSection {
@@ -14,33 +13,10 @@ interface SettingsSection {
 /** List of settings sections. */
 @Component({
   selector: 'app-settings-home',
-  imports: [RouterLink, MatIconModule, MatRadioModule],
+  imports: [RouterLink, MatIconModule],
   template: `
-    <section class="font-style">
-      <div class="font-style-header">
-        <mat-icon class="section-icon" fontSet="material-symbols-outlined" aria-hidden="true">text_fields</mat-icon>
-        <div class="section-main">
-          <h2 class="section-title" id="font-style-label">Font style</h2>
-          <div class="section-description">Changes the whole app right away. Pick what reads best.</div>
-        </div>
-      </div>
-      <mat-radio-group
-        class="font-options"
-        aria-labelledby="font-style-label"
-        [value]="fontStyle.current()"
-        (change)="fontStyle.set($event.value)"
-      >
-        @for (f of fontStyle.styles; track f.id) {
-          <mat-radio-button class="font-option" [value]="f.id" [class.selected]="fontStyle.current() === f.id">
-            <span class="font-sample-heading" [style.font-family]="f.headingFont">{{ f.label }}</span>
-            <span class="font-sample-body" [style.font-family]="f.bodyFont">{{ f.description }}</span>
-          </mat-radio-button>
-        }
-      </mat-radio-group>
-    </section>
-
     <nav class="sections" aria-label="Settings">
-      @for (s of sections; track s.path) {
+      @for (s of sections(); track s.path) {
         <a class="section" [routerLink]="s.path">
           <mat-icon class="section-icon" fontSet="material-symbols-outlined" aria-hidden="true">{{
             s.icon
@@ -76,55 +52,6 @@ interface SettingsSection {
         background-color: var(--mat-sys-surface-container);
       }
     }
-    .font-style {
-      margin-bottom: 16px;
-      padding: 12px 16px 16px;
-      border: 1px solid var(--mat-sys-outline-variant);
-      border-radius: 12px;
-      background-color: var(--mat-sys-surface-container-low);
-    }
-    .font-style-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    h2.section-title {
-      margin: 0;
-    }
-    .font-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 8px;
-    }
-    .font-option {
-      display: block;
-      padding: 4px 8px 8px 0;
-      border: 1px solid var(--mat-sys-outline-variant);
-      border-radius: 8px;
-
-      &.selected {
-        border-color: var(--mat-sys-primary);
-        background-color: var(--mat-sys-surface-container);
-      }
-
-      // Label column: sample heading over sample body text.
-      ::ng-deep label {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        cursor: pointer;
-      }
-    }
-    .font-sample-heading {
-      font-size: 18px;
-      line-height: 1.3;
-    }
-    .font-sample-body {
-      font-size: 14px;
-      line-height: 1.35;
-      color: var(--mat-sys-on-surface-variant);
-    }
     .section-icon {
       color: var(--mat-sys-primary);
       flex-shrink: 0;
@@ -142,9 +69,15 @@ interface SettingsSection {
   `,
 })
 export class SettingsHome {
-  protected readonly fontStyle = inject(FontStyleService);
+  private readonly fontStyle = inject(FontStyleService);
 
-  protected readonly sections: SettingsSection[] = [
+  protected readonly sections = computed<SettingsSection[]>(() => [
+    {
+      path: 'font-style',
+      icon: 'text_fields',
+      title: 'Font style',
+      description: `Now: ${this.fontStyle.styles.find((s) => s.id === this.fontStyle.current())?.label}`,
+    },
     {
       path: 'about',
       icon: 'info',
@@ -169,5 +102,5 @@ export class SettingsHome {
       title: 'Credits',
       description: 'Artwork and libraries used in the app.',
     },
-  ];
+  ]);
 }
