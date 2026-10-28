@@ -142,20 +142,33 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       const { text, toggle, click } = await open('/quests');
 
       // All comes first and is selected by default; there's no separate Inbox tab.
-      expect(text('.horizons mat-button-toggle')).toEqual(['All 3', 'Now 1', 'Soon 0', 'Someday 0']);
+      expect(text('.horizons mat-button-toggle')).toEqual(['All 3', 'Today 1', 'Soon 0', 'Someday 0']);
       expect(text('.horizons .mat-button-toggle-checked')).toEqual(['All 3']);
       expect(text('.quest-title')).toEqual(['Inbox work', 'Now work', 'Inbox thing']);
 
-      await toggle('Now');
+      await toggle('Today');
       expect(text('.quest-title')).toEqual(['Now work']);
 
       await toggle('All');
       await click('.tag-chip');
       expect(text('.quest-title')).toEqual(['Inbox work', 'Now work']);
-      expect(text('.horizons mat-button-toggle')).toEqual(['All 2', 'Now 1', 'Soon 0', 'Someday 0']);
+      expect(text('.horizons mat-button-toggle')).toEqual(['All 2', 'Today 1', 'Soon 0', 'Someday 0']);
 
       await toggle('Soon');
       expect(text('.empty')).toEqual(['No open quests tagged Work.']);
+    });
+
+    it('groups completed quests by the day they were completed', async () => {
+      const old = store().add('Old one');
+      const recent = store().add('Recent one');
+      const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+      store().update({ ...store().byId(old.id)!, closedAt: daysAgo(5) });
+      store().update({ ...store().byId(recent.id)!, closedAt: new Date().toISOString() });
+      const { el, text } = await open('/quests');
+
+      expect(text('.closed .group-title')).toEqual(['Today', 'Earlier']);
+      const groups = Array.from(el().querySelectorAll('.closed .day-group'));
+      expect(groups.map((g) => text('.quest-title', g))).toEqual([['Recent one'], ['Old one']]);
     });
 
     it('closes into a collapsed Closed section, reopens, and deletes after confirming', async () => {
@@ -215,7 +228,7 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       await type('[formControlName="title"]', '   ');
       expect(quest().title).toBe('Fix kitchen sink'); // blank isn't saved
 
-      await toggle('Now');
+      await toggle('Today');
       await toggle('Urgent', el().querySelector('.importance')!);
       expect([quest().horizon, quest().importance]).toEqual(['now', 'urgent']);
 
@@ -244,6 +257,13 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       dialog().button('Delete').click();
       await stable();
       expect(store().quests()).toEqual([]);
+      expect(url()).toBe('/quests');
+    });
+
+    it('Done goes back to the quest list', async () => {
+      const l = store().add('Water the plants');
+      const { click } = await open(`/quests/${l.id}`);
+      await click('.done');
       expect(url()).toBe('/quests');
     });
 

@@ -26,7 +26,8 @@ import { MatIconModule } from '@angular/material/icon';
           <a href="https://opengameart.org/users/gameartforge" target="_blank" rel="noopener">GameArtForge</a>,
           licensed
           <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>.
-          Scaled; the app icons place it on a dark background.
+          Scaled, and pixelated to 16×16 for the app's game look; the app icons place it on a dark
+          background.
         </div>
       </div>
     </section>
@@ -36,8 +37,8 @@ import { MatIconModule } from '@angular/material/icon';
       <div>
         <div class="what">Built with</div>
         <div class="who">
-          Angular, Angular Material, Material Symbols, Tiptap, and the "Press Start 2P" font (SIL Open Font
-          License).
+          Angular, Angular Material, Material Symbols, Tiptap, and the fonts Press Start 2P, Pixelify Sans,
+          Chakra Petch, Exo 2 and Orbitron (SIL Open Font License) and Roboto (Apache License 2.0).
         </div>
       </div>
     </section>

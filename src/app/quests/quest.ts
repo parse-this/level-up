@@ -1,9 +1,9 @@
 export const HORIZONS = ['inbox', 'now', 'soon', 'someday'] as const;
-/** Where a quest sits: Inbox (unsorted) → Now / Soon / Someday. */
+/** Where a quest sits: Inbox (unsorted) → Today (id `now`) / Soon / Someday. */
 export type Horizon = (typeof HORIZONS)[number];
 export const HORIZON_LABELS: Record<Horizon, string> = {
   inbox: 'Inbox',
-  now: 'Now',
+  now: 'Today',
   soon: 'Soon',
   someday: 'Someday',
 };

@@ -3,6 +3,7 @@
 // components according to the Material 3 design spec.
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
+@use 'sass:map';
 @use '@angular/material' as mat;
 
 html {
@@ -17,6 +18,67 @@ html {
       density: 0,
     )
   );
+}
+
+// Font styles (Settings → Font style; `FontStyleService` sets `font-<id>` on <html>).
+// Each swaps the theme fonts, so every Material component and `--mat-sys-*` font follows:
+// brand = display/headline/title (headings, list titles), plain = body/label (text, forms, buttons).
+// Roboto (theme above) shows only until the saved style applies. Keep in sync with FONT_STYLES
+// and the Google Fonts link in index.html.
+$font-styles: (
+  pixel-chakra: (
+    brand: '"Pixelify Sans", sans-serif',
+    plain: '"Chakra Petch", sans-serif',
+  ),
+  exo: (
+    brand: '"Exo 2", sans-serif',
+    plain: '"Exo 2", sans-serif',
+  ),
+  orbitron: (
+    brand: 'Orbitron, sans-serif',
+    plain: 'Roboto, sans-serif',
+  ),
+  pixel: (
+    brand: '"Pixelify Sans", sans-serif',
+    plain: '"Pixelify Sans", sans-serif',
+  ),
+);
+
+@each $id, $fonts in $font-styles {
+  html.font-#{$id} {
+    @include mat.theme(
+      (
+        typography: (
+          brand-family: map.get($fonts, brand),
+          plain-family: map.get($fonts, plain),
+        ),
+      )
+    );
+  }
+}
+
+// Every font style.
+html.game-font {
+  // Plain inputs/buttons don't inherit fonts by default.
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+  }
+
+  // Caps sized to the 32px mushroom. Press Start 2P is drawn on an 8px grid:
+  // keep sizes at multiples of 8 so its pixels stay crisp.
+  // Its capitals fill the top 7/8 of the line (the rest is for descenders), so nudge down
+  // 1/16 em to center them on the mushroom.
+  .title-word {
+    position: relative;
+    top: 0.0625em;
+    font-family: 'Press Start 2P', ui-monospace, monospace;
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: 0;
+  }
 }
 
 body {
@@ -61,6 +123,16 @@ body {
 .pixel {
   font-family: 'Press Start 2P', ui-monospace, monospace;
   letter-spacing: 0;
+}
+
+// Pixel-art images (16×16 sources): scale up with crisp square pixels. Show at multiples of 16px.
+.pixel-art {
+  image-rendering: pixelated;
+}
+
+// Pop-up menus (tag picker, New entry): a border so they stand out from the page behind.
+.mat-mdc-menu-panel.mat-mdc-menu-panel {
+  border: 1px solid var(--mat-sys-outline);
 }
 
 // Text for screen readers only.

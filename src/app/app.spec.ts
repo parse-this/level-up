@@ -25,7 +25,7 @@ describe('App', () => {
     const title = toolbar?.querySelector('.app-title');
     expect(title?.firstElementChild?.tagName).toBe('IMG');
     expect(title?.textContent?.trim()).toBe('Level Up');
-    expect(toolbar?.querySelector('img')?.getAttribute('src')).toBe('images/mushroom-green.png');
+    expect(toolbar?.querySelector('img')?.getAttribute('src')).toBe('images/mushroom-pixel.png');
   });
 
   it('should render the feature tabs in order', async () => {

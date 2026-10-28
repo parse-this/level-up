@@ -7,7 +7,7 @@ Level Up turns looking after yourself into a game: train your body, clear your m
 ## Features
 
 - **Training Ground**: workouts (exercises, sets, reps, weights, machine settings, rests), Get Moving (walks, runs, rides) and weigh-ins, with suggestions and auto-fill from past sessions.
-- **Quest Log**: capture goals, to-dos and lists in seconds; sort into Now / Soon / Someday, tag them, mark them important or urgent, add notes and checklists.
+- **Quest Log**: capture goals, to-dos and lists in seconds; sort into Today / Soon / Someday, tag them, mark them important or urgent, add notes and checklists.
 - **XP and levels**: XP for actions, daily streak bonuses, personal records, and a breakdown on the Player page.
 
 See [SPEC.md](SPEC.md) for the full, detailed specification.

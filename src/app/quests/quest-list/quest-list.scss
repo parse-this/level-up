@@ -126,9 +126,27 @@
     background-color: var(--urgent-tint);
   }
 
-  &.is-closed .quest-title {
-    color: var(--mat-sys-on-surface-variant);
-    text-decoration: line-through;
+  // Completed: faded "disabled" look (no strikethrough, easier to read); full color on hover.
+  &.is-closed {
+    border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 50%, transparent);
+    background-color: transparent;
+
+    .quest-title {
+      color: color-mix(in srgb, var(--mat-sys-on-surface) 50%, transparent);
+    }
+
+    mat-icon {
+      color: color-mix(in srgb, var(--mat-sys-on-surface) 40%, transparent);
+    }
+
+    &:hover .quest-title,
+    .quest-main:focus-visible .quest-title {
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    button:hover mat-icon {
+      color: var(--mat-sys-on-surface-variant);
+    }
   }
 }
 
@@ -199,6 +217,21 @@
 
 .closed {
   margin-top: 8px;
+}
+
+// Day groups match the Training Ground log.
+.closed-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.group-title {
+  margin: 0 0 8px;
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
 
 // ---- Phones: capture docked above the bottom nav, near the thumb ----

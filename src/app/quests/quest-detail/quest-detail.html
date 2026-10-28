@@ -10,9 +10,15 @@
           }}</mat-icon>
           {{ l.closedAt ? 'Completed quest' : 'Quest' }}
         </h2>
-        <button matIconButton type="button" (click)="remove()" aria-label="Delete quest">
-          <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
-        </button>
+        <div class="heading-actions">
+          <button matButton="tonal" type="button" class="toggle-closed" (click)="toggleClosed()">
+            <mat-icon fontSet="material-symbols-outlined">{{ l.closedAt ? 'undo' : 'check' }}</mat-icon>
+            {{ l.closedAt ? 'Reopen' : 'Complete quest' }}
+          </button>
+          <button matIconButton type="button" (click)="remove()" aria-label="Delete quest">
+            <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+          </button>
+        </div>
       </div>
 
       <form [formGroup]="form" class="quest-form" novalidate>
@@ -77,9 +83,9 @@
             · Completed {{ l.closedAt | date: 'MMM d, y, h:mm a' }}
           }
         </span>
-        <button matButton="filled" type="button" class="toggle-closed" (click)="toggleClosed()">
-          <mat-icon fontSet="material-symbols-outlined">{{ l.closedAt ? 'undo' : 'check' }}</mat-icon>
-          {{ l.closedAt ? 'Reopen' : 'Complete quest' }}
+        <button matButton="filled" type="button" class="done" (click)="done()">
+          <mat-icon fontSet="material-symbols-outlined">check</mat-icon>
+          Done
         </button>
       </div>
     } @else {

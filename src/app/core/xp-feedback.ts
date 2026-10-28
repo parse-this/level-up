@@ -23,7 +23,7 @@ const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200
       @for (p of pops(); track p.id) {
         <div class="pop pixel" [class]="'pop pixel ' + p.kind">
           @if (p.kind === 'level-up') {
-            <img src="images/mushroom-green.png" alt="" class="mushroom" />
+            <img src="images/mushroom-pixel.png" alt="" class="mushroom pixel-art" />
           }
           {{ p.text }}
         </div>
@@ -76,7 +76,7 @@ const DURATION: Record<PopKind, number> = { xp: 1600, pr: 2200, 'level-up': 3200
     }
 
     .mushroom {
-      width: 28px;
+      width: 32px;
       height: auto;
     }
 

@@ -7,6 +7,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../core/confirm-dialog';
+import { localDay } from '../../core/xp';
+import { groupByDay, today } from '../../training/entry';
 import {
   HORIZONS,
   HORIZON_LABELS,
@@ -69,6 +71,14 @@ export class QuestList {
 
   protected readonly closedVisible = computed(() =>
     this.store.closed().filter((l) => this.inHorizon(l, this.horizon()) && this.hasTag(l, this.tagFilter())),
+  );
+
+  /** Completed quests in Today / Yesterday / Earlier groups by the day they were completed (like the Training Ground log). */
+  protected readonly closedGroups = computed(() =>
+    groupByDay(
+      this.closedVisible().map((quest) => ({ date: localDay(quest.closedAt!), quest })),
+      today(),
+    ),
   );
 
   /** Open quests per horizon, within the current tag filter. */

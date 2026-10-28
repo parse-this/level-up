@@ -108,21 +108,29 @@
       <mat-expansion-panel-header>
         <mat-panel-title>Completed ({{ closedVisible().length }})</mat-panel-title>
       </mat-expansion-panel-header>
-      <ul class="quests closed-list" aria-label="Completed quests">
-        @for (l of closedVisible(); track l.id) {
-          <li class="quest is-closed">
-            <button matIconButton type="button" (click)="reopen(l)" [attr.aria-label]="'Reopen ' + l.title">
-              <mat-icon fontSet="material-symbols-outlined">check_circle</mat-icon>
-            </button>
-            <a class="quest-main" [routerLink]="[l.id]">
-              <span class="quest-title">{{ l.title }}</span>
-            </a>
-            <button matIconButton type="button" (click)="remove(l)" [attr.aria-label]="'Delete ' + l.title">
-              <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
-            </button>
-          </li>
+      <div class="closed-groups" role="group" aria-label="Completed quests">
+        @for (group of closedGroups(); track group.key) {
+          <section class="day-group">
+            <h3 class="group-title" [id]="'closed-' + group.key">{{ group.label }}</h3>
+            <ul class="quests closed-list" [attr.aria-labelledby]="'closed-' + group.key">
+              @for (item of group.items; track item.quest.id) {
+                @let l = item.quest;
+                <li class="quest is-closed">
+                  <button matIconButton type="button" (click)="reopen(l)" [attr.aria-label]="'Reopen ' + l.title">
+                    <mat-icon fontSet="material-symbols-outlined">check_circle</mat-icon>
+                  </button>
+                  <a class="quest-main" [routerLink]="[l.id]">
+                    <span class="quest-title">{{ l.title }}</span>
+                  </a>
+                  <button matIconButton type="button" (click)="remove(l)" [attr.aria-label]="'Delete ' + l.title">
+                    <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
         }
-      </ul>
+      </div>
     </mat-expansion-panel>
   }
 </div>

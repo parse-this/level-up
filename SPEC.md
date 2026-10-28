@@ -21,20 +21,24 @@ ng add @angular/material
 - `.choices`: button-toggle group, flex-wrap, toggles `flex: 1 0 40px` (used with `hideSingleSelectionIndicator`).
 - `.details-card` (mb 24px); `.details`: wrapping flex row of fields (gap 16px, pt 16px) with `.date-field` (0 1 180px), `.grow` (1 1 220px), `.small-field` (0 1 120px).
 - `.field-label`: label-medium, muted, mb 4px.
+- `.mat-mdc-menu-panel`: 1px `--mat-sys-outline` border on all pop-up menus (tag picker, New entry) so they stand out.
 - `.visually-hidden`: screen-reader-only text.
 - `.pixel`: "Press Start 2P" (Google Fonts link in `index.html`) — only for game bits (Lv, pops, stat badges), sized ~8–13px.
+- **Font styles** (trial; trim once one is picked): `FONT_STYLES` in `core/font-style.service.ts` ↔ Sass map `$font-styles` in `styles.scss` ↔ Google Fonts link in `index.html` (keep all three in sync). Each style = `html.font-<id>` re-running `mat.theme` with typography only (`brand-family` = display/headline/title, `plain-family` = body/label; families passed quoted with `sans-serif` fallback), so all `--mat-sys-*` fonts and Material components switch. Styles in picker order (heading / body): `exo` (Exo 2; **default**), `orbitron` (Orbitron / Roboto), `pixel-chakra` (Pixelify Sans / Chakra Petch), `pixel` (Pixelify Sans). No plain-Roboto option (base theme Roboto shows only before the class applies). `html.game-font` is always added: plain `input/textarea/select/button` inherit font; toolbar `.title-word` uses Press Start 2P 32px, line-height 1, `position: relative; top: 0.0625em` to center its caps on the mushroom (phones 20px — crisp at 2–3× phone pixel density; otherwise keep multiples of 8 so its pixels stay crisp; caps sized to match the mushroom's height).
+- `FontStyleService` (root, created by `App`): `styles`, `current` signal (key `levelUpTracker.settings.fontStyle`, default `exo`; unknown/removed id such as `classic`/`chakra` → default), `set(id)` saves; effect sets the classes on `<html>`. Removes the old `levelUpTracker.settings.gameFont` key.
 
 ## Assets
 - Static files in `public/` (copied as-is, served from root). Images in `public/images/`, referenced as `images/<file>`.
-- `mushroom-green.png`: 128×128 green mushroom with white spots — "Mushrooms Set 01" (`Mushrooms_01_128x128_Alt_00_005.png`) by GameArtForge, opengameart.org, **CC BY 3.0 → attribution required** (Settings → Credits). Smooth art: no `image-rendering: pixelated`.
+- `mushroom-green.png`: 128×128 green mushroom with white spots — "Mushrooms Set 01" (`Mushrooms_01_128x128_Alt_00_005.png`) by GameArtForge, opengameart.org, **CC BY 3.0 → attribution required** (Settings → Credits). Original kept for Credits.
+- `mushroom-pixel.png`: 16×16 pixel version of it (bicubic downscale, hard alpha edges) used in the toolbar (32px; phones 24px), level-up pop (32px) and Player card (64px). Class `.pixel-art` (`image-rendering: pixelated`); show at multiples of 16px.
 - App colors: XP green `#21aa52`, yellow `#f8da92` (originally sampled from an earlier mushroom image).
 
 ## Shell (`App`)
 - **Phone-first.** Breakpoint phone = `max-width: 599.98px` (CSS media queries; `.desktop-only` / `.phone-only` in `app.scss`). `index.html` viewport has `viewport-fit=cover`; safe-area insets padded.
-- `mat-toolbar` bg `--mat-sys-surface-container` (min-height 64px, 56px phone; padding includes safe-area insets): `.app-title` = mushroom-green.png (left; 32px, decorative `alt=""`) + `.title-word` "Level Up" (no "Tracker"), flex gap 8px, all screen sizes; phones: title-medium, nowrap, gap 6px, icon 28px. Spacer; `PlayerStatus`; desktop-only settings gear `matIconButton` → `/settings` (aria "Settings"; primary when active).
+- `mat-toolbar` bg `--mat-sys-surface-container` (min-height 64px, 56px phone; padding includes safe-area insets): `a.app-title` (`routerLink="/"` → app entry point, aria "Level Up home"; inherits color, no underline, focus outline primary) = mushroom-pixel.png `.pixel-art` (left; 32px, phones 24px; decorative `alt=""`) + `.title-word` "Level Up" (no "Tracker"), flex gap 12px, all screen sizes; phones: title-medium, nowrap, gap 10px. Spacer; `PlayerStatus`; desktop-only settings gear `matIconButton` → `/settings` (aria "Settings"; primary when active).
 - **Names:** features are shown as **Training Ground** (code: `training/`, `Training`, `EntryStore`) and **Quest Log** (code: `quests/`, `Quests`, `Quest`/`QuestStore`). Code names describe what things are, so display names can change without renames.
 - Desktop nav: `mat-tab-nav-bar` under toolbar, tabs "Training Ground", "Quest Log".
-- Phone nav: fixed `nav.bottom-nav` (aria "Main"), height 64px + bottom safe-area, bg surface-container, top border outline-variant; items Training Ground (`fitness_center`), Quest Log (`menu_book`), Settings (`settings`): icon inside `.indicator` pill (56×30px, radius 15px) + label-medium, muted. Active (`aria-current=page`): pill bg secondary-container / icon on-secondary-container, label on-surface bold.
+- Phone nav: fixed `nav.bottom-nav` (aria "Main"), height 64px + bottom safe-area, bg surface-container, top border outline-variant; items Training Ground (`fitness_center`), Quest Log (`menu_book`), Settings (`settings`): icon inside `.indicator` pill (56×30px, radius 15px) + label-medium at 13px/18px, muted. Active (`aria-current=page`): pill bg secondary-container / icon on-secondary-container, label on-surface bold.
 - `main`: max-width 960px, centered, padding 24px 16px (phone: 16px, bottom padding clears the bottom nav); contains `router-outlet`.
 - Number inputs use `inputmode` (`decimal` for weight/distance, `numeric` for hours/minutes) for phone keypads.
 - Icons: `mat-icon fontSet="material-symbols-outlined"` (font linked in `index.html`).
@@ -99,7 +103,7 @@ All pages lazy-loaded (`loadComponent`) to stay under the 500 kB initial budget.
 - `StorageService` (root): `load<T>(key, fallback)`, `save(key, value)`, `keys()` (app keys, sorted), `raw(key)` (stored text or null); JSON in `localStorage`; errors logged, load falls back.
 - All keys start with `APP_KEY_PREFIX = 'levelUpTracker.'`.
 - Features use only `StorageService`, never `localStorage`, so a backend can replace it later.
-- Keys: `levelUpTracker.training.entries`, `levelUpTracker.quests.items`, `levelUpTracker.quests.tags`.
+- Keys: `levelUpTracker.training.entries`, `levelUpTracker.quests.items`, `levelUpTracker.quests.tags`, `levelUpTracker.settings.fontStyle` (style id).
 - Key rename (temporary): `StorageService.loadRenamed(oldKey, key, fallback)` moves data from `levelUpTracker.bodyXp.entries` / `.openLoops.loops` / `.openLoops.tags` to the new keys once (never overwrites an existing new key; old key removed). Remove (back to `load`) once every browser in use has opened the app since the rename.
 - Optional fields omitted from saved data when empty. IDs: `crypto.randomUUID()`.
 
@@ -210,7 +214,7 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 - Shell `Quests` header row: h1 "Quest Log — Free your mind" + ⓘ (aria "What is the Quest Log?") toggling `FeatureInfo feature="quests"` (closable); then router-outlet.
 
 #### Data (`quest.ts`)
-- `HORIZONS = inbox|now|soon|someday` (labels Inbox/Now/Soon/Someday). `IMPORTANCES = normal|important|urgent` (labels Normal/Important/Urgent; icons none / `star` / `local_fire_department`).
+- `HORIZONS = inbox|now|soon|someday` (labels Inbox/Today/Soon/Someday; `now` is shown as "Today"). `IMPORTANCES = normal|important|urgent` (labels Normal/Important/Urgent; icons none / `star` / `local_fire_department`).
 - `Quest`: `id`, `title` (plain), `horizon`, `importance`, `tagIds`, `notes?` (HTML; omitted when blank), `createdAt`, `closedAt?`. Closing keeps everything; only hides it from open lists.
 - `Tag`: `id`, `name`.
 - Helpers: `nextImportance` (cycle), `byImportanceThenNewest` (urgent → important → normal, then `createdAt` desc), `isBlankHtml` (no text and no li/a/img).
@@ -223,10 +227,10 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 
 #### `QuestList` (`quest-list/`)
 - Page = flex column. **Capture** card (`form.capture`): input "What's on your mind?" (aria "New quest", `enterkeyhint="done"`), row: `TagPicker [(selected)]`, importance outlined button cycling Normal → ⭐ → 🔥 (icon `label_important` when normal; label colored), spacer, "Add" (filled; disabled when blank). Enter/Add captures, resets tags + importance, refocuses input. Phones: capture moves below the list (`order: 99`), `position: sticky; bottom: 64px + safe-area + 8px`, shadow.
-- Filters: horizon `.choices` **All** · Now · Soon · Someday with counts (All first and default; it includes unsorted Inbox quests — no Inbox tab; counts within tag filter). Quests still start with horizon `inbox`, and the quest page keeps Inbox as a "When" choice. Tag chips row (`.tag-chip`, pill, active = secondary-container; count within horizon; tap again clears) + "⋯" (`more_horiz`, aria "Manage tags") → `ManageTags` dialog. Row hidden when no tags.
+- Filters: horizon `.choices` **All** · Today · Soon · Someday with counts (All first and default; it includes unsorted Inbox quests — no Inbox tab; counts within tag filter). Quests still start with horizon `inbox`, and the quest page keeps Inbox as a "When" choice. Tag chips row (`.tag-chip`, pill, active = secondary-container; count within horizon; tap again clears) + "⋯" (`more_horiz`, aria "Manage tags") → `ManageTags` dialog. Row hidden when no tags.
 - Open quests list (aria "Open quests"): row (`.quest`, `.urgent` tint) = complete button (`radio_button_unchecked`, aria "Complete <title>"), link to `:id` with title + mini tag pills + `notes` icon if notes, importance icon (colored).
 - Empty: All "No open quests. Mind clear!"; else "Nothing in <Horizon> yet."; with tag "No open quests tagged <name>."
-- "Completed (N)" `mat-expansion-panel` (list aria "Completed quests"; collapsed; only if any match filters): reopen (`check_circle`, aria "Reopen <title>"), struck-through muted title link, delete (confirm "Delete quest?" / `"<title>" will be gone for good. This can't be undone.`).
+- "Completed (N)" `mat-expansion-panel` (group aria "Completed quests"; collapsed; only if any match filters). Inside, `section.day-group`s from `groupByDay` keyed by the local day of `closedAt` (Today / Yesterday / Earlier; same `h3.group-title` style and 20px gap as the Training Ground log), each a `ul.closed-list` (labelled by its heading). Row: reopen (`check_circle`, aria "Reopen <title>"), faded "disabled" row (transparent bg, border outline-variant 50%, title on-surface 50%, icons on-surface 40%; hover/focus brightens to on-surface-variant; no strikethrough) with title link, delete (confirm "Delete quest?" / `"<title>" will be gone for good. This can't be undone.`).
 
 #### `TagPicker` (`tag-picker/`)
 - `selected = model<string[]>`. Outlined "Tags" / "Tags (N)" button (`sell` icon) → `mat-menu`: checkbox per tag, "No tags yet.", new-tag input + add (creates or reuses, then selects). Menu body stops click/keydown propagation so it stays open while typing.
@@ -236,9 +240,9 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 
 #### `QuestDetail` (`quest-detail/`, route `:questId`)
 - Grid like `EntryDetail`: `BackRail` "All quests" → `/quests`.
-- Heading "Quest" (`radio_button_unchecked`) / "Completed quest" (`check_circle`) + delete (aria "Delete quest"; confirm "Delete quest?", then back to list). Unknown id: "Quest not found."
+- Heading "Quest" (`radio_button_unchecked`) / "Completed quest" (`check_circle`) + `.heading-actions`: tonal "Complete quest" (check) / "Reopen" (undo) (`.toggle-closed`; stays on the page) + delete (aria "Delete quest"; confirm "Delete quest?", then back to list). Unknown id: "Quest not found."
 - Autosave, loaded once per id; **each field saves on its own** (blank title isn't saved but doesn't block others): title ("Quest", required), "When" horizon `.choices`, "Importance" `.choices` with colored icons, "Tags" removable pills + `TagPicker`, "Notes" `NotesEditor` (keyed by id).
-- Footer: "Captured <date> [· Completed <date>]" (`MMM d, y, h:mm a`) + filled "Complete quest" (check) / "Reopen" (undo).
+- Footer: "Captured <date> [· Completed <date>]" (`MMM d, y, h:mm a`) + filled "Done" (check; `.done`) → `/quests`, like `EntryDetail`.
 
 #### `NotesEditor` (`notes-editor/`, Tiptap 3, lazy with QuestDetail)
 - Packages: `@tiptap/core`, `@tiptap/pm`, `@tiptap/starter-kit` (heading, codeBlock, code, blockquote, horizontalRule off; link `openOnClick:false, autolink, defaultProtocol https`), `@tiptap/extension-list` (`TaskList`, `TaskItem` nested).
@@ -249,7 +253,7 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 ### Settings
 Not a tab: opened from the toolbar gear.
 - Header: "Settings — Options menu"
-- `SettingsHome`: list of section links (same row style as the Training Ground log: icon in primary, title, description, chevron_right). Sections: "About" (icon `info`, "What the Training Ground and Quest Log are for.") → `about`; "View data" (icon `database`, "See everything saved in this browser.") → `data`; "Credits" (icon `favorite`, "Artwork and libraries used in the app.") → `credits`.
+- `SettingsHome`: first a "Font style" card (`section.font-style`, card look of the rows; icon `text_fields`, h2 "Font style", "Changes the whole app right away. Pick what reads best."): `mat-radio-group` (labelled by the h2; grid `auto-fill minmax(240px, 1fr)`, gap 8px) of `.font-option`s, each showing its label in its heading font (18px) over its description in its body font (14px, muted); selected = primary border + surface-container → `FontStyleService.set`; then `nav.sections`: list of section links (same row style as the Training Ground log: icon in primary, title, description, chevron_right). Sections: "About" (icon `info`, "What the Training Ground and Quest Log are for.") → `about`; "View data" (icon `database`, "See everything saved in this browser.") → `data`; "Credits" (icon `favorite`, "Artwork and libraries used in the app.") → `credits`.
 - `SaveLoad` (`settings/save-load.ts`, route `save-load`, title "Save & Load | Level Up Tracker"; home section "Save & load game", icon `save`, "Back up your progress to a file, or restore it."): "← Settings"; h2 "Save & load game"; intro (progress lives in this browser; save to back up or move devices).
   - Card "Save game" (`save` avatar; "Download everything (training, quests, tags) as a save file."): filled "Save game" (download) → Blob download `level-up-save-YYYY-MM-DD.json` = `SaveFile {app:'level-up', version:1, savedAt, data: {key → parsed value}}` of every app key (pretty JSON).
   - Card "Load game" (`sports_esports`; "Restore from a save file."): filled "Load game" (upload) opens hidden file input (`.json`). Invalid → `role=alert` error ("That file isn't a Level Up save." / "…(it's not valid JSON)."). Valid → summary "Save from <`MMM d, y, h:mm a`>" + "N training entries · N quests · N tags" + hint; actions Cancel / Replace (outlined) / **Merge** (filled).
@@ -258,7 +262,7 @@ Not a tab: opened from the toolbar gear.
   - Pure helpers in `core/save-game.ts`: `makeSaveFile`, `saveFileName`, `parseSaveFile` (checks app/version/savedAt/data and that every key has the app prefix), `describeSave`, `mergeData`. `StorageService` adds `saveRaw(key, raw)`, `remove(key)`.
 - `About` (`settings/about.ts`): "← Settings"; h2 "About Level Up"; intro "Level Up turns looking after yourself into a game. Train your body, clear your mind, and earn XP for showing up every day."; `FeatureInfo` training + quests (not closable); link to Player page.
 - `FeatureInfo` (`core/feature-info.ts`): single source `FEATURES[training|quests]` = `{name, tagline, icon, intro[], points[], outro}`; card (border, radius 12px, surface-container-low): icon + "<name> — <tagline>" (+ close button when `closable`), intro paragraphs, bullet points, outro. Quest Log text covers goals/to-dos/lists, getting things done, unburdening the mind; Training Ground covers workouts, Get Moving, weigh-ins, suggestions/auto-fill, XP. Edit wording there only.
-- `Credits` (`settings/credits.ts`, route `credits`, title "Credits | Level Up Tracker"): "← Settings"; h2 "Credits"; cards: mushroom thumb + "Mushroom artwork" — "Mushrooms Set 01" (link to opengameart page) by GameArtForge (link to profile), licensed CC BY 3.0 (link), "Scaled; the app icons place it on a dark background."; code icon + "Built with" — Angular, Angular Material, Material Symbols, Tiptap, "Press Start 2P" (SIL OFL). Keep any new CC-BY asset credited here.
+- `Credits` (`settings/credits.ts`, route `credits`, title "Credits | Level Up Tracker"): "← Settings"; h2 "Credits"; cards: mushroom thumb + "Mushroom artwork" — "Mushrooms Set 01" (link to opengameart page) by GameArtForge (link to profile), licensed CC BY 3.0 (link), "Scaled, and pixelated to 16×16 for the app's game look; the app icons place it on a dark background."; code icon + "Built with" — Angular, Angular Material, Material Symbols, Tiptap, fonts Press Start 2P, Pixelify Sans, Chakra Petch, Exo 2, Orbitron (SIL OFL) and Roboto (Apache 2.0). Keep fonts listed here. Keep any new CC-BY asset credited here.
 - `DataViewer` (read-only, snapshot on open):
   - "← Settings" text button; h2 "View data"; muted intro: saved in this browser's local storage, read-only, other browsers/devices separate.
   - One outlined `mat-card` per app key: title = key without prefix (e.g. `training.entries`); subtitle "N item(s) · size" (count only for arrays; size B or KB to 1 decimal; "Not valid JSON · size" if unparsable); `pre.json` pretty-printed (2 spaces; raw text if invalid), monospace 13px, max-height 480px scroll, bg surface-container-lowest, focusable.
@@ -287,13 +291,13 @@ Game layer on top; core labels stay plain. Everything is **derived from saved da
 
 #### `Player` page (`player/`, route `player`, title "Player | Level Up Tracker")
 - Header "Player — Your stats".
-- Card: mushroom-green.png (56px) + "Lv N" (pixel 20px green) + 10px XP bar + "X / Y XP to Lv N+1 · T XP total"; 3 stats: 🔥 current streak, best streak, personal records.
+- Card: mushroom-pixel.png `.pixel-art` (64px) + "Lv N" (pixel 20px green) + 10px XP bar + "X / Y XP to Lv N+1 · T XP total"; 3 stats: 🔥 current streak, best streak, personal records.
 - "Where your XP came from" table: one row per source with activity ("Quests captured", "Quests completed", "Sessions (workouts, Get Moving)", "Weigh-ins", "Personal records": "count × each", "+xp" green), "Streak bonuses" (+), "Missed days" (− orange `#ff8a65`), "Kept from going below 0" (+, if any); footer "Total". Empty: "No XP yet. Press Start: log something!"
 - "Last N days" (max 14, newest first): date `EEE, MMM d` | active: "🔥 S[ · +E actions] · +B streak"; missed: "Missed · −L" or "Missed · free day"; today with nothing: "Nothing yet today" | running total.
 - Collapsed "How XP works" panel: plain-language rules (values from constants).
 
 #### `XpFeedback` (in app root)
-- Effect compares previous `{xp, level, pr}`; skips first load. Pops (`.pop.pixel`, fixed top-right under banner, `aria-live` polite, pointer-events none): "New PR!" (yellow `#f8da92`, 2.2s), "+N XP" on increases only (green pill, 1.6s float-up/fade), "LEVEL UP! Lv N" with mushroom-green.png (13px, scale-in, 3.2s), "Level down: Lv N" (muted, 2.6s). Reduced motion: no animation.
+- Effect compares previous `{xp, level, pr}`; skips first load. Pops (`.pop.pixel`, fixed top-right under banner, `aria-live` polite, pointer-events none): "New PR!" (yellow `#f8da92`, 2.2s), "+N XP" on increases only (green pill, 1.6s float-up/fade), "LEVEL UP! Lv N" with mushroom-pixel.png `.pixel-art` (32px, scale-in, 3.2s), "Level down: Lv N" (muted, 2.6s). Reduced motion: no animation.
 
 #### Themed text
 - Empty states: "Nothing logged yet. Press Start: tap "New entry"."; "No exercises yet. Press Start: …"; "Inbox empty. Mind clear!"; "No save data yet."

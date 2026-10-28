@@ -118,6 +118,10 @@ export class QuestDetail {
     else this.store.close(l.id);
   }
 
+  protected done(): void {
+    this.router.navigate(['/quests']);
+  }
+
   protected async remove(): Promise<void> {
     const l = this.quest();
     if (!l) return;

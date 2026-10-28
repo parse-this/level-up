@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { FontStyleService } from './core/font-style.service';
 import { PlayerStatus } from './core/player-status';
 import { XpFeedback } from './core/xp-feedback';
 
@@ -24,6 +25,9 @@ import { XpFeedback } from './core/xp-feedback';
   templateUrl: './app.html',
 })
 export class App {
+  // Created at startup so the saved font choice applies before any page shows.
+  private readonly fontStyle = inject(FontStyleService);
+
   /** Desktop tabs (Settings is the toolbar gear). */
   protected readonly tabs = [
     { path: '/training', label: 'Training Ground' },
