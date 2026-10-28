@@ -54,11 +54,11 @@ export class QuestStore {
   }
 
   /** Captures a quest into the Inbox. */
-  add(title: string, options: { tagIds?: string[]; importance?: Importance } = {}): Quest {
+  add(title: string, options: { tagIds?: string[]; importance?: Importance; horizon?: Horizon } = {}): Quest {
     const quest: Quest = {
       id: crypto.randomUUID(),
       title: title.trim(),
-      horizon: 'inbox',
+      horizon: options.horizon ?? 'inbox',
       importance: options.importance ?? 'normal',
       tagIds: options.tagIds ?? [],
       createdAt: new Date().toISOString(),

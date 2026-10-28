@@ -39,6 +39,13 @@
   }
 }
 
+// Capture's When: compact (it's optional), with breathing room above the action buttons.
+.capture-when {
+  --mat-button-toggle-height: 32px;
+  --mat-button-toggle-label-text-size: 13px;
+  margin-bottom: 6px;
+}
+
 .capture-actions {
   display: flex;
   flex-wrap: wrap;

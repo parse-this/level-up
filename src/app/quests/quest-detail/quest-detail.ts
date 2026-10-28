@@ -11,7 +11,6 @@ import { MatInputModule } from '@angular/material/input';
 import { BackRail } from '../../core/back-rail';
 import { ConfirmService } from '../../core/confirm-dialog';
 import {
-  HORIZONS,
   HORIZON_LABELS,
   Horizon,
   IMPORTANCES,
@@ -23,6 +22,7 @@ import {
 import { QuestStore } from '../quest.store';
 import { NotesEditor } from '../notes-editor/notes-editor';
 import { TagPicker } from '../tag-picker/tag-picker';
+import { WhenChoices, WhenFirstChoice } from '../when-choices/when-choices';
 
 /** One quest's page: title, horizon, importance, tags, notes; close/reopen; delete. Saved as you go. */
 @Component({
@@ -38,6 +38,7 @@ import { TagPicker } from '../tag-picker/tag-picker';
     BackRail,
     NotesEditor,
     TagPicker,
+    WhenChoices,
   ],
   templateUrl: './quest-detail.html',
   styleUrl: './quest-detail.scss',
@@ -54,8 +55,8 @@ export class QuestDetail {
   /** The editor is created once per quest, so key it by id. */
   protected readonly notesKey = computed(() => (this.quest() ? [this.questId()] : []));
 
-  protected readonly horizons = HORIZONS;
-  protected readonly horizonLabels = HORIZON_LABELS;
+  /** A quest can be moved back to unsorted, so the page offers Inbox first. */
+  protected readonly inboxChoice: WhenFirstChoice = { value: 'inbox', label: HORIZON_LABELS.inbox };
   protected readonly importances = IMPORTANCES;
   protected readonly importanceLabels = IMPORTANCE_LABELS;
   protected readonly importanceIcons = IMPORTANCE_ICONS;
@@ -65,7 +66,6 @@ export class QuestDetail {
       nonNullable: true,
       validators: [Validators.required, Validators.pattern(/\S/)],
     }),
-    horizon: new FormControl<Horizon>('inbox', { nonNullable: true }),
     importance: new FormControl<Importance>('normal', { nonNullable: true }),
   });
 
@@ -76,23 +76,26 @@ export class QuestDetail {
       const l = untracked(this.quest);
       if (l) {
         this.form.setValue(
-          { title: l.title, horizon: l.horizon, importance: l.importance },
+          { title: l.title, importance: l.importance },
           { emitEvent: false },
         );
       }
     });
 
     // Each field saves on its own, so a momentarily blank title doesn't block other changes.
-    const { title, horizon, importance } = this.form.controls;
+    const { title, importance } = this.form.controls;
     title.valueChanges.pipe(takeUntilDestroyed()).subscribe((t) => {
       if (title.valid) this.save({ title: t.trim() });
     });
-    horizon.valueChanges.pipe(takeUntilDestroyed()).subscribe((h) => this.save({ horizon: h }));
     importance.valueChanges.pipe(takeUntilDestroyed()).subscribe((i) => this.save({ importance: i }));
   }
 
   protected tagName(id: string): string {
     return this.store.tagById(id)?.name ?? '';
+  }
+
+  protected setHorizon(h: string | null): void {
+    if (h) this.save({ horizon: h as Horizon });
   }
 
   protected setTags(tagIds: string[]): void {

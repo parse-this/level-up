@@ -78,6 +78,7 @@ src/app/
   quests/quest-detail/          QuestDetail
   quests/tag-picker/           TagPicker
   quests/manage-tags/          ManageTags (dialog)
+  quests/when-choices/         WhenChoices (shared When toggles)
   quests/notes-editor/         NotesEditor (Tiptap)
   player/                          Player (level breakdown page)
   settings/settings.ts             shell: header + router-outlet
@@ -222,15 +223,18 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 
 #### `QuestStore` (root; keys `levelUpTracker.quests.items`, `…tags`)
 - `quests`, `tags` (alphabetical, case-insensitive), `open` (sorted), `closed` (closedAt desc), `horizonCounts` (open), `byId`, `tagById`.
-- `add(title, {tagIds?, importance?})` → trimmed, horizon inbox. `update(quest)`, `close(id)` (sets `closedAt`), `reopen(id)` (removes it), `remove(id)`.
+- `add(title, {tagIds?, importance?, horizon?})` → trimmed, horizon defaults to inbox. `update(quest)`, `close(id)` (sets `closedAt`), `reopen(id)` (removes it), `remove(id)`.
 - `createTag(name)` (trim; existing returned if same name ignoring case), `renameTag(id, name)` (ignores blank), `deleteTag(id)` (also strips from quests).
 
 #### `QuestList` (`quest-list/`)
-- Page = flex column. **Capture** card (`form.capture`): input "What's on your mind?" (aria "New quest", `enterkeyhint="done"`), row: `TagPicker [(selected)]`, importance outlined button cycling Normal → ⭐ → 🔥 (icon `label_important` when normal; label colored), spacer, "Add" (filled; disabled when blank). Enter/Add captures, resets tags + importance, refocuses input. Phones: capture moves below the list (`order: 99`), `position: sticky; bottom: 64px + safe-area + 8px`, shadow.
-- Filters: horizon `.choices` **All** · Today · Soon · Someday with counts (All first and default; it includes unsorted Inbox quests — no Inbox tab; counts within tag filter). Quests still start with horizon `inbox`, and the quest page keeps Inbox as a "When" choice. Tag chips row (`.tag-chip`, pill, active = secondary-container; count within horizon; tap again clears) + "⋯" (`more_horiz`, aria "Manage tags") → `ManageTags` dialog. Row hidden when no tags.
+- Page = flex column. **Capture** card (`form.capture`): input "What's on your mind?" (aria "New quest", `enterkeyhint="done"`); `WhenChoices.capture-when` (compact: `--mat-button-toggle-height` 32px, label 13px, margin-bottom 6px; Today · Soon · Someday, `clearable`, aria "When (optional)"; none picked → horizon inbox; `linkedSignal` defaulting to the viewed filter tab, All → none, so new quests stay in view; reset to that default after each capture); row: `TagPicker [(selected)]`, importance outlined button cycling Normal → ⭐ → 🔥 (icon `label_important` when normal; label colored), spacer, "Add" (filled; disabled when blank). Enter/Add captures, resets tags + importance, refocuses input. Phones: capture moves below the list (`order: 99`), `position: sticky; bottom: 64px + safe-area + 8px`, shadow.
+- Filters: `WhenChoices.horizons` with first choice **All** + counts: **All** · Today · Soon · Someday (All first and default; it includes unsorted Inbox quests — no Inbox tab; counts within tag filter). Quests still start with horizon `inbox`, and the quest page keeps Inbox as a "When" choice. Tag chips row (`.tag-chip`, pill, active = secondary-container; count within horizon; tap again clears) + "⋯" (`more_horiz`, aria "Manage tags") → `ManageTags` dialog. Row hidden when no tags.
 - Open quests list (aria "Open quests"): row (`.quest`, `.urgent` tint) = complete button (`radio_button_unchecked`, aria "Complete <title>"), link to `:id` with title + mini tag pills + `notes` icon if notes, importance icon (colored).
 - Empty: All "No open quests. Mind clear!"; else "Nothing in <Horizon> yet."; with tag "No open quests tagged <name>."
 - "Completed (N)" `mat-expansion-panel` (group aria "Completed quests"; collapsed; only if any match filters). Inside, `section.day-group`s from `groupByDay` keyed by the local day of `closedAt` (Today / Yesterday / Earlier; same `h3.group-title` style and 20px gap as the Training Ground log), each a `ul.closed-list` (labelled by its heading). Row: reopen (`check_circle`, aria "Reopen <title>"), faded "disabled" row (transparent bg, border outline-variant 50%, title on-surface 50%, icons on-surface 40%; hover/focus brightens to on-surface-variant; no strikethrough) with title link, delete (confirm "Delete quest?" / `"<title>" will be gone for good. This can't be undone.`).
+
+#### `WhenChoices` (`when-choices/`)
+- The one "When" toggle row (tabs, Capture, quest page): `.choices` group of `SORTED_HORIZONS` (Today · Soon · Someday; `quest.ts`) with optional `first` choice `{value, label}` before them and optional `counts` (`.count` after each label). `value = model<string | null>`; `clearable` (boolean attr): tapping the picked choice again sets null. Selection via group `change` (so arrow keys work); clear via click, ignoring the click that just picked. Full-width equal buttons styled in the component.
 
 #### `TagPicker` (`tag-picker/`)
 - `selected = model<string[]>`. Outlined "Tags" / "Tags (N)" button (`sell` icon) → `mat-menu`: checkbox per tag, "No tags yet.", new-tag input + add (creates or reuses, then selects). Menu body stops click/keydown propagation so it stays open while typing.
@@ -241,7 +245,7 @@ Goals, to-dos, lists and anything else to keep track of: helps get things done a
 #### `QuestDetail` (`quest-detail/`, route `:questId`)
 - Grid like `EntryDetail`: `BackRail` "All quests" → `/quests`.
 - Heading "Quest" (`radio_button_unchecked`) / "Completed quest" (`check_circle`) + `.heading-actions`: tonal "Complete quest" (check) / "Reopen" (undo) (`.toggle-closed`; stays on the page) + delete (aria "Delete quest"; confirm "Delete quest?", then back to list). Unknown id: "Quest not found."
-- Autosave, loaded once per id; **each field saves on its own** (blank title isn't saved but doesn't block others): title ("Quest", required), "When" horizon `.choices`, "Importance" `.choices` with colored icons, "Tags" removable pills + `TagPicker`, "Notes" `NotesEditor` (keyed by id).
+- Autosave, loaded once per id; **each field saves on its own** (blank title isn't saved but doesn't block others): title ("Quest", required), "When" `WhenChoices` with first choice Inbox (saves on pick; not in the form group), "Importance" `.choices` with colored icons, "Tags" removable pills + `TagPicker`, "Notes" `NotesEditor` (keyed by id).
 - Footer: "Captured <date> [· Completed <date>]" (`MMM d, y, h:mm a`) + filled "Done" (check; `.done`) → `/quests`, like `EntryDetail`.
 
 #### `NotesEditor` (`notes-editor/`, Tiptap 3, lazy with QuestDetail)

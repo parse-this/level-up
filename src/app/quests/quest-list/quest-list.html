@@ -10,6 +10,13 @@
       autocomplete="off"
       enterkeyhint="done"
     />
+    <app-when-choices
+      class="capture-when"
+      [value]="captureHorizon()"
+      (valueChange)="setCaptureHorizon($event)"
+      clearable
+      ariaLabel="When (optional)"
+    />
     <div class="capture-actions">
       <app-tag-picker [(selected)]="captureTags" />
       <button
@@ -32,19 +39,14 @@
   </form>
 
   <div class="filters">
-    <mat-button-toggle-group
-      class="choices horizons"
+    <app-when-choices
+      class="horizons"
+      [first]="allChoice"
+      [counts]="horizonCounts()"
       [value]="horizon()"
-      (change)="setHorizon($event.value)"
-      hideSingleSelectionIndicator
-      aria-label="Horizon"
-    >
-      @for (h of horizonOptions; track h) {
-        <mat-button-toggle [value]="h">
-          {{ horizonLabels[h] }} <span class="count">{{ horizonCounts()[h] }}</span>
-        </mat-button-toggle>
-      }
-    </mat-button-toggle-group>
+      (valueChange)="setHorizon($event)"
+      ariaLabel="Horizon"
+    />
 
     @if (store.tags().length) {
       <div class="tag-filters" role="group" aria-label="Filter by tag">

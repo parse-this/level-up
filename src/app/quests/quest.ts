@@ -8,7 +8,11 @@ export const HORIZON_LABELS: Record<Horizon, string> = {
   someday: 'Someday',
 };
 
-export const IMPORTANCES = ['normal', 'important', 'urgent'] as const;
+/** Sorted horizons (no Inbox): what the "When" toggles offer — Today · Soon · Someday. */
+export type SortedHorizon = Exclude<Horizon, 'inbox'>;
+export const SORTED_HORIZONS = HORIZONS.filter((h): h is SortedHorizon => h !== 'inbox');
+
+export const IMPORTANCES =['normal', 'important', 'urgent'] as const;
 export type Importance = (typeof IMPORTANCES)[number];
 export const IMPORTANCE_LABELS: Record<Importance, string> = {
   normal: 'Normal',

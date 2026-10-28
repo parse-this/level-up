@@ -1,4 +1,4 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,23 +10,24 @@ import { ConfirmService } from '../../core/confirm-dialog';
 import { localDay } from '../../core/xp';
 import { groupByDay, today } from '../../training/entry';
 import {
-  HORIZONS,
   HORIZON_LABELS,
   Horizon,
   IMPORTANCE_ICONS,
   IMPORTANCE_LABELS,
   Importance,
   Quest,
+  SORTED_HORIZONS,
+  SortedHorizon,
   isBlankHtml,
   nextImportance,
 } from '../quest';
 import { QuestStore } from '../quest.store';
 import { ManageTags } from '../manage-tags/manage-tags';
 import { TagPicker } from '../tag-picker/tag-picker';
+import { WhenChoices, WhenFirstChoice } from '../when-choices/when-choices';
 
 /** Filter tabs: All (default; includes unsorted Inbox quests), then the sorted horizons. */
-type HorizonFilter = 'all' | Exclude<Horizon, 'inbox'>;
-const SORTED_HORIZONS = HORIZONS.filter((h): h is Exclude<Horizon, 'inbox'> => h !== 'inbox');
+type HorizonFilter = 'all' | SortedHorizon;
 
 @Component({
   selector: 'app-quest-list',
@@ -34,10 +35,10 @@ const SORTED_HORIZONS = HORIZONS.filter((h): h is Exclude<Horizon, 'inbox'> => h
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
-    MatButtonToggleModule,
     MatExpansionModule,
     MatIconModule,
     TagPicker,
+    WhenChoices,
   ],
   templateUrl: './quest-list.html',
   styleUrl: './quest-list.scss',
@@ -48,8 +49,7 @@ export class QuestList {
   private readonly confirmService = inject(ConfirmService);
   private readonly captureInput = viewChild.required<ElementRef<HTMLInputElement>>('captureInput');
 
-  protected readonly horizonOptions: HorizonFilter[] = ['all', ...SORTED_HORIZONS];
-  protected readonly horizonLabels: Record<HorizonFilter, string> = { ...HORIZON_LABELS, all: 'All' };
+  protected readonly allChoice: WhenFirstChoice = { value: 'all', label: 'All' };
   protected readonly importanceLabels = IMPORTANCE_LABELS;
   protected readonly importanceIcons = IMPORTANCE_ICONS;
 
@@ -60,6 +60,16 @@ export class QuestList {
 
   // ---- Filters ----
   protected readonly horizon = signal<HorizonFilter>('all');
+
+  /**
+   * Capture's "When" (null = none picked → unsorted Inbox). Starts on the tab being viewed
+   * (All → none), so new quests stay in view.
+   */
+  protected readonly captureHorizon = linkedSignal<SortedHorizon | null>(() => this.defaultCaptureHorizon());
+  private defaultCaptureHorizon(): SortedHorizon | null {
+    const h = this.horizon();
+    return h === 'all' ? null : h;
+  }
   protected readonly tagFilter = signal<string | null>(null);
 
   private readonly inHorizon = (l: Quest, h: HorizonFilter) => h === 'all' || l.horizon === h;
@@ -113,10 +123,15 @@ export class QuestList {
   protected capture(): void {
     const title = this.title.value.trim();
     if (!title) return;
-    this.store.add(title, { tagIds: this.captureTags(), importance: this.captureImportance() });
+    this.store.add(title, {
+      tagIds: this.captureTags(),
+      importance: this.captureImportance(),
+      horizon: this.captureHorizon() ?? 'inbox',
+    });
     this.title.setValue('');
     this.captureTags.set([]);
     this.captureImportance.set('normal');
+    this.captureHorizon.set(this.defaultCaptureHorizon());
     this.captureInput().nativeElement.focus();
   }
 
@@ -124,8 +139,12 @@ export class QuestList {
     this.captureImportance.update(nextImportance);
   }
 
-  protected setHorizon(h: HorizonFilter): void {
-    this.horizon.set(h);
+  protected setHorizon(h: string | null): void {
+    this.horizon.set((h ?? 'all') as HorizonFilter);
+  }
+
+  protected setCaptureHorizon(h: string | null): void {
+    this.captureHorizon.set(h as SortedHorizon | null);
   }
 
   protected setTagFilter(id: string | null): void {

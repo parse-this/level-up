@@ -38,7 +38,8 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       await stable();
     };
     /** Click a toggle button (horizon/importance) by its visible text. */
-    const toggle = async (label: string, root: ParentNode = el()) => {
+    /** On the list page this defaults to the filter tabs (Capture has its own When toggles). */
+    const toggle = async (label: string, root: ParentNode = el().querySelector('.filters') ?? el()) => {
       Array.from(root.querySelectorAll('mat-button-toggle'))
         // Text may start with an icon name, e.g. "local_fire_department Urgent".
         .find((t) => t.textContent?.replace(/\s+/g, ' ').trim().split(' ').includes(label))!
@@ -94,6 +95,41 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       expect(text('.quest-title')).toEqual(['Call dentist']);
       expect(el().querySelector<HTMLInputElement>('.capture-input')!.value).toBe('');
       expect(document.activeElement).toBe(el().querySelector('.capture-input'));
+    });
+
+    it('captures into the chosen When (same choices as the tabs, optional); starts on the viewed tab and resets after', async () => {
+      const { el, text, type, toggle, stable } = await open('/quests');
+      const capture = el().querySelector('.capture')!;
+      const selectedWhen = () => text('.capture-when .mat-button-toggle-checked');
+      const add = async (title: string) => {
+        await type('.capture-input', title);
+        el().querySelector('form.capture')!.dispatchEvent(new Event('submit'));
+        await stable();
+      };
+      const horizonOf = (title: string) => store().quests().find((q) => q.title === title)!.horizon;
+
+      expect(text('.capture-when mat-button-toggle')).toEqual(['Today', 'Soon', 'Someday']);
+      expect(selectedWhen()).toEqual([]);
+      await add('Unsorted thing');
+      expect(horizonOf('Unsorted thing')).toBe('inbox');
+
+      await toggle('Today', capture);
+      expect(selectedWhen()).toEqual(['Today']);
+      // Tapping it again clears it.
+      await toggle('Today', capture);
+      expect(selectedWhen()).toEqual([]);
+
+      await toggle('Today', capture);
+      await add('Call the bank');
+      expect(horizonOf('Call the bank')).toBe('now');
+      expect(selectedWhen()).toEqual([]);
+
+      await toggle('Soon');
+      expect(selectedWhen()).toEqual(['Soon']);
+      await add('Plan trip');
+      expect(horizonOf('Plan trip')).toBe('soon');
+      expect(selectedWhen()).toEqual(['Soon']);
+      expect(text('.quest-title')).toEqual(['Plan trip']);
     });
 
     it('sets importance (cycling) and tags with buttons when capturing; both reset after', async () => {
