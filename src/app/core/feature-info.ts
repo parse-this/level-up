@@ -40,7 +40,7 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
       "It's here to help you get things done, and to unburden your mind: capture something in seconds so you can stop holding onto it, then organize it when you're ready.",
     ],
     points: [
-      'New quests land in the Inbox. Sort them into Now, Soon or Someday when you have a minute.',
+      'New quests start unsorted and show under All. Sort them into Now, Soon or Someday when you have a minute.',
       'Tag quests to group them into lists, and mark them ⭐ Important or 🔥 Urgent so they rise to the top.',
       "Open a quest to add notes, checklists and links. Complete it when it's done; it's kept, just out of the way.",
     ],

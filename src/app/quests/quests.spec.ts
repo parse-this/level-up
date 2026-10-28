@@ -80,9 +80,9 @@ describe('Quest Log', { timeout: 15_000 }, () => {
   });
 
   describe('list', () => {
-    it('captures with Enter into the Inbox, then resets', async () => {
+    it('captures with Enter (unsorted, shown under All), then resets', async () => {
       const { el, text, type, stable } = await open('/quests');
-      expect(text('.empty')).toEqual(['Inbox empty. Mind clear!']);
+      expect(text('.empty')).toEqual(['No open quests. Mind clear!']);
 
       await type('.capture-input', 'Call dentist');
       el().querySelector('form.capture')!.dispatchEvent(new Event('submit'));
@@ -141,8 +141,10 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       vi.useRealTimers();
       const { text, toggle, click } = await open('/quests');
 
-      expect(text('.horizons mat-button-toggle')).toEqual(['Inbox 2', 'Now 1', 'Soon 0', 'Someday 0', 'All 3']);
-      expect(text('.quest-title')).toEqual(['Inbox work', 'Inbox thing']);
+      // All comes first and is selected by default; there's no separate Inbox tab.
+      expect(text('.horizons mat-button-toggle')).toEqual(['All 3', 'Now 1', 'Soon 0', 'Someday 0']);
+      expect(text('.horizons .mat-button-toggle-checked')).toEqual(['All 3']);
+      expect(text('.quest-title')).toEqual(['Inbox work', 'Now work', 'Inbox thing']);
 
       await toggle('Now');
       expect(text('.quest-title')).toEqual(['Now work']);
@@ -150,7 +152,7 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       await toggle('All');
       await click('.tag-chip');
       expect(text('.quest-title')).toEqual(['Inbox work', 'Now work']);
-      expect(text('.horizons mat-button-toggle')).toEqual(['Inbox 1', 'Now 1', 'Soon 0', 'Someday 0', 'All 2']);
+      expect(text('.horizons mat-button-toggle')).toEqual(['All 2', 'Now 1', 'Soon 0', 'Someday 0']);
 
       await toggle('Soon');
       expect(text('.empty')).toEqual(['No open quests tagged Work.']);

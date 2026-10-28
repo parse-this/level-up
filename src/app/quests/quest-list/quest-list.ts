@@ -22,7 +22,9 @@ import { QuestStore } from '../quest.store';
 import { ManageTags } from '../manage-tags/manage-tags';
 import { TagPicker } from '../tag-picker/tag-picker';
 
-type HorizonFilter = Horizon | 'all';
+/** Filter tabs: All (default; includes unsorted Inbox quests), then the sorted horizons. */
+type HorizonFilter = 'all' | Exclude<Horizon, 'inbox'>;
+const SORTED_HORIZONS = HORIZONS.filter((h): h is Exclude<Horizon, 'inbox'> => h !== 'inbox');
 
 @Component({
   selector: 'app-quest-list',
@@ -44,7 +46,7 @@ export class QuestList {
   private readonly confirmService = inject(ConfirmService);
   private readonly captureInput = viewChild.required<ElementRef<HTMLInputElement>>('captureInput');
 
-  protected readonly horizonOptions: HorizonFilter[] = [...HORIZONS, 'all'];
+  protected readonly horizonOptions: HorizonFilter[] = ['all', ...SORTED_HORIZONS];
   protected readonly horizonLabels: Record<HorizonFilter, string> = { ...HORIZON_LABELS, all: 'All' };
   protected readonly importanceLabels = IMPORTANCE_LABELS;
   protected readonly importanceIcons = IMPORTANCE_ICONS;
@@ -55,7 +57,7 @@ export class QuestList {
   protected readonly captureImportance = signal<Importance>('normal');
 
   // ---- Filters ----
-  protected readonly horizon = signal<HorizonFilter>('inbox');
+  protected readonly horizon = signal<HorizonFilter>('all');
   protected readonly tagFilter = signal<string | null>(null);
 
   private readonly inHorizon = (l: Quest, h: HorizonFilter) => h === 'all' || l.horizon === h;
@@ -73,7 +75,7 @@ export class QuestList {
   protected readonly horizonCounts = computed(() => {
     const open = this.store.open().filter((l) => this.hasTag(l, this.tagFilter()));
     const counts = { all: open.length } as Record<HorizonFilter, number>;
-    for (const h of HORIZONS) counts[h] = open.filter((l) => l.horizon === h).length;
+    for (const h of SORTED_HORIZONS) counts[h] = open.filter((l) => l.horizon === h).length;
     return counts;
   });
 
@@ -91,8 +93,6 @@ export class QuestList {
     const tag = this.tagFilter() && this.store.tagById(this.tagFilter()!);
     if (tag) return `No open quests tagged ${tag.name}.`;
     switch (this.horizon()) {
-      case 'inbox':
-        return 'Inbox empty. Mind clear!';
       case 'all':
         return 'No open quests. Mind clear!';
       default:
