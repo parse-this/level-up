@@ -65,13 +65,30 @@ $phone: '(max-width: 599.98px)';
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   color: var(--mat-sys-on-surface-variant);
   text-decoration: none;
   font: var(--mat-sys-label-medium);
 
+  // Pill behind the icon (Material 3 nav bar "active indicator").
+  .indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 30px;
+    border-radius: 15px;
+    transition: background-color 150ms ease;
+  }
+
   &.active {
-    color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-surface);
+    font-weight: 700;
+
+    .indicator {
+      background-color: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+    }
   }
 
   &:focus-visible {

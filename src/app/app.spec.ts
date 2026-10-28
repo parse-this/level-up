@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 
@@ -56,5 +56,20 @@ describe('App', () => {
       ['Quest Log', '/quests'],
       ['Settings', '/settings'],
     ]);
+  });
+
+  it('highlights the current section in the bottom nav', async () => {
+    const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl('/quests');
+    await fixture.whenStable();
+    const items = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('nav.bottom-nav a'),
+    );
+    expect(items.map((a) => [a.classList.contains('active'), a.getAttribute('aria-current')])).toEqual([
+      [false, null],
+      [true, 'page'],
+      [false, null],
+    ]);
+    expect(items[1].querySelector('.indicator mat-icon')).toBeTruthy();
   });
 });

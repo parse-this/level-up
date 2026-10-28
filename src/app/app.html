@@ -41,8 +41,16 @@
 
 <nav class="bottom-nav phone-only" aria-label="Main">
   @for (item of bottomNav; track item.path) {
-    <a class="bottom-nav-item" [routerLink]="item.path" routerLinkActive="active">
-      <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</mat-icon>
+    <a
+      class="bottom-nav-item"
+      [routerLink]="item.path"
+      routerLinkActive="active"
+      #navLink="routerLinkActive"
+      [attr.aria-current]="navLink.isActive ? 'page' : null"
+    >
+      <span class="indicator">
+        <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</mat-icon>
+      </span>
       <span class="bottom-nav-label">{{ item.label }}</span>
     </a>
   }
