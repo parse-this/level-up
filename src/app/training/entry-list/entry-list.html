@@ -17,6 +17,14 @@
     </button>
   }
   <mat-divider />
+  <div class="menu-heading" aria-hidden="true">Sport</div>
+  @for (s of sports; track s) {
+    <button mat-menu-item type="button" (click)="newSport(s)">
+      <mat-icon fontSet="material-symbols-outlined">{{ sportIcons[s] }}</mat-icon>
+      <span>{{ sportLabels[s] }}</span>
+    </button>
+  }
+  <mat-divider />
   <button mat-menu-item type="button" (click)="newWeighIn()">
     <mat-icon fontSet="material-symbols-outlined">monitor_weight</mat-icon>
     <span>Weigh-in</span>
@@ -31,7 +39,12 @@
         icon(e)
       }}</mat-icon>
       <div class="entry-main">
-        <div class="entry-title">{{ title(e) }}</div>
+        <div class="entry-title">
+          {{ title(e) }}
+          @if (e.notes) {
+            <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes">notes</mat-icon>
+          }
+        </div>
         <div class="entry-meta">{{ meta(e) }}</div>
         @if (names) {
           <div class="entry-exercises">{{ names }}</div>

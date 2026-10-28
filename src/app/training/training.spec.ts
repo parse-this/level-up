@@ -3,7 +3,7 @@ import { Router, provideRouter, withComponentInputBinding } from '@angular/route
 import { RouterTestingHarness } from '@angular/router/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { routes } from '../app.routes';
-import { ExerciseInput, MoveEntry, WeighInEntry, WorkoutEntry } from './entry';
+import { ExerciseInput, MoveEntry, SportEntry, WeighInEntry, WorkoutEntry } from './entry';
 import { EntryStore } from './entry.store';
 
 const squat: ExerciseInput = {
@@ -123,6 +123,7 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         'Walk',
         'Run',
         'Bike',
+        'Golf',
         'Weigh-in',
       ]);
 
@@ -190,6 +191,68 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
       expect(dialog().message).toBe("This can't be undone.");
       dialog().button('Cancel').click();
       await stable();
+    });
+
+    describe('notes and Done (every entry type)', () => {
+      it('saves entry notes as you type (trimmed; blank removes them) and shows them in the log', async () => {
+        const w = store().create({ type: 'workout', date: '2026-10-01', exercises: [] });
+        const { type } = await open(`/training/${w.id}`);
+        await type('.entry-notes textarea', '  Felt strong today ');
+        expect(store().byId(w.id)!.notes).toBe('Felt strong today');
+        await type('.entry-notes textarea', '   ');
+        expect('notes' in store().byId(w.id)!).toBe(false);
+      });
+
+      it('keeps notes when other fields of a weigh-in, run or golf entry change', async () => {
+        const i = store().create({ type: 'weigh-in', date: '2026-10-01', notes: 'After breakfast' });
+        const { type } = await open(`/training/${i.id}`);
+        await type('[formControlName="weight"]', '181');
+        expect(store().byId(i.id)).toMatchObject({ weight: 181, notes: 'After breakfast' });
+      });
+
+      it('keeps notes when a run is edited', async () => {
+        const m = store().create({ type: 'move', date: '2026-10-01', activity: 'run', notes: 'Windy' });
+        const { type } = await open(`/training/${m.id}`);
+        await type('[formControlName="distance"]', '3');
+        expect(store().byId(m.id)).toMatchObject({ distance: 3, notes: 'Windy' });
+      });
+
+      it('keeps notes when a golf round is edited', async () => {
+        const g = store().create({ type: 'sport', sport: 'golf', date: '2026-10-01', format: '18-holes', notes: 'New driver' });
+        const { type } = await open(`/training/${g.id}`);
+        await type('[formControlName="score"]', '90');
+        expect(store().byId(g.id)).toMatchObject({ score: 90, notes: 'New driver' });
+      });
+
+      it('shows a notes icon in the log for entries with notes', async () => {
+        store().create({ type: 'weigh-in', date: '2026-10-02', weight: 180, notes: 'x' });
+        store().create({ type: 'weigh-in', date: '2026-10-01', weight: 181 });
+        const { el } = await open('/training');
+        const rows = Array.from(el().querySelectorAll('.entry'));
+        expect(rows.map((r) => !!r.querySelector('.notes-icon'))).toEqual([true, false]);
+      });
+
+      it('Done goes back to the log (saying it saves automatically)', async () => {
+        const i = store().create({ type: 'weigh-in', date: '2026-10-01' });
+        const { text, click, stable } = await open(`/training/${i.id}`);
+        expect(text('.footer .autosave')).toEqual(['cloud_done Saves automatically']);
+        await click('button.done');
+        await stable();
+        expect(url()).toBe('/training');
+      });
+
+      it('Done still asks about unsaved exercise forms', async () => {
+        const w = store().create({ type: 'workout', date: '2026-10-01', exercises: [] });
+        const { el, click, type } = await open(`/training/${w.id}`);
+        await click('.add-exercise');
+        await type('app-exercise-form [formControlName="name"]', 'Curl');
+        // Don't wait for the page to settle: navigation is paused on the dialog.
+        el().querySelector<HTMLElement>('button.done')!.click();
+        await vi.waitFor(() => expect(dialog().title).toBe('Discard unsaved exercises?'));
+        dialog().button('Cancel').click();
+        await vi.waitFor(() => expect(document.querySelector('mat-dialog-container')).toBeNull());
+        expect(url()).toBe(`/training/${w.id}`);
+      });
     });
 
     describe('workout', () => {
@@ -458,6 +521,61 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         expect(saved()).toMatchObject({ date: '2026-10-25', weight: 180.2 }); // blank date doesn't block
         await type('[formControlName="weight"]', '');
         expect('weight' in saved()).toBe(false);
+      });
+    });
+
+    describe('golf', () => {
+      it('is created from the Sport menu, then saves type and score; score only for rounds', async () => {
+        const { harness, el, text, type, stable } = await open('/training');
+        el().querySelector<HTMLElement>('.new-entry')!.click();
+        await stable();
+        Array.from(document.querySelectorAll<HTMLElement>('[mat-menu-item]'))
+          .find((i) => i.textContent?.includes('Golf'))!
+          .click();
+        await harness.fixture.whenStable();
+        const [entry] = store().entries();
+        expect(entry).toMatchObject({ type: 'sport', sport: 'golf' });
+        expect('format' in entry).toBe(false);
+        expect(url()).toBe(`/training/${entry.id}`);
+
+        const saved = () => store().byId(entry.id) as SportEntry;
+        const pick = async (label: string) => {
+          Array.from(el().querySelectorAll('mat-button-toggle'))
+            .find((t) => t.textContent?.trim() === label)!
+            .querySelector('button')!
+            .click();
+          await stable();
+        };
+        expect(text('.entry-heading')).toEqual(['golf_course Golf']);
+        expect(text('mat-button-toggle')).toEqual(['Practice', '9 holes', '18 holes']);
+        expect(el().querySelector('[formControlName="score"]')).toBeNull();
+
+        await pick('18 holes');
+        expect(saved().format).toBe('18-holes');
+        await type('[formControlName="score"]', '92');
+        expect(saved().score).toBe(92);
+        await type('[formControlName="score"]', '9.5'); // invalid: not saved
+        expect(saved().score).toBe(92);
+        await type('[formControlName="score"]', '88');
+
+        await pick('Practice'); // no score for practice
+        expect(el().querySelector('[formControlName="score"]')).toBeNull();
+        expect(saved().format).toBe('practice');
+        expect('score' in saved()).toBe(false);
+      });
+
+      it('shows type and score in the log', async () => {
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-25', format: '18-holes', score: 92 });
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-24', format: 'practice' });
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-23' });
+        const { text } = await open('/training');
+        expect(text('.entry-title')).toEqual(['Golf', 'Golf', 'Golf']);
+        expect(text('.entry-meta')).toEqual([
+          'Sun, Oct 25, 2026 · 18 holes · Score 92',
+          'Sat, Oct 24, 2026 · Practice',
+          'Fri, Oct 23, 2026 · Not set up yet',
+        ]);
+        expect(text('.entry-icon')).toEqual(['golf_course', 'golf_course', 'golf_course']);
       });
     });
   });

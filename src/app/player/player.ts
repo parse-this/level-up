@@ -9,7 +9,7 @@ import { XpService } from '../core/xp.service';
 const SOURCE_LABELS: Record<XpSource, string> = {
   captureQuest: 'Quests captured',
   completeQuest: 'Quests completed',
-  session: 'Sessions (workouts, Get Moving)',
+  session: 'Sessions (workouts, Get Moving, sports)',
   weighIn: 'Weigh-ins',
   personalRecord: 'Personal records',
 };

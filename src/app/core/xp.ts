@@ -5,7 +5,7 @@ import type { Quest } from '../quests/quest';
 export const XP = {
   captureQuest: 2,
   completeQuest: 10,
-  /** Workout or Get Moving, once anything is entered. */
+  /** Workout, Get Moving or sport, once anything is entered. */
   session: 10,
   weighIn: 5,
   personalRecord: 5,
@@ -151,12 +151,18 @@ export function computeProgress(entries: readonly Entry[], quests: readonly Ques
   for (const entry of entries) {
     const day = localDay(entry.createdAt);
     active.add(day);
-    const hasContent =
-      entry.type === 'workout'
-        ? !!entry.name || entry.exercises.length > 0
-        : entry.type === 'move'
-          ? !!entry.location || entry.durationMinutes != null || entry.distance != null
-          : entry.weight != null;
+    const hasContent = (() => {
+      switch (entry.type) {
+        case 'workout':
+          return !!entry.name || entry.exercises.length > 0;
+        case 'move':
+          return !!entry.location || entry.durationMinutes != null || entry.distance != null;
+        case 'weigh-in':
+          return entry.weight != null;
+        case 'sport':
+          return entry.format != null;
+      }
+    })();
     if (hasContent && eligible(entry.date, day)) {
       earn(day, entry.type === 'weigh-in' ? 'weighIn' : 'session');
       if (entry.date === addDays(day, -1)) active.add(entry.date);

@@ -129,6 +129,21 @@ describe('computeProgress', () => {
     expect(p.totalXp).toBe(1); // just the day-1 streak bonus: being in the app still counts as active
   });
 
+  it('counts a golf session once its type is picked', () => {
+    const golf = (format?: 'practice' | '18-holes'): Entry => ({
+      id: `g${n++}`,
+      type: 'sport',
+      sport: 'golf',
+      date: '2026-10-01',
+      createdAt: at('2026-10-01'),
+      ...(format ? { format } : {}),
+    });
+    expect(computeProgress([golf()], [], '2026-10-01').totalXp).toBe(1);
+    const p = computeProgress([golf('18-holes')], [], '2026-10-01');
+    expect(p.totalXp).toBe(XP.session + 1);
+    expect(p.sources.session.count).toBe(1);
+  });
+
   it('backfill: yesterday earns XP and repairs the streak; older earns nothing but keeps today active', () => {
     // Active Oct 1 and 2, nothing Oct 3, then on Oct 4 log a run dated Oct 3.
     const quests = [quest('2026-10-01'), quest('2026-10-02')];

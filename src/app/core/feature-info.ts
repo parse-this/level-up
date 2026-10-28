@@ -25,6 +25,7 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
     points: [
       'Workouts: exercises with sets, reps, weights, machine settings and rests. Name a workout (like "Push day") and next time it shows what you did last time.',
       'Get Moving: walks, runs and bike rides, with time, distance and place.',
+      'Sports: golf for now: practice, 9 or 18 holes, with your score.',
       'Weigh-ins: your weight, and when you weighed in.',
     ],
     outro:

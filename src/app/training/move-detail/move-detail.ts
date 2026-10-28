@@ -137,11 +137,12 @@ export class MoveDetail {
       const v = this.form.getRawValue();
       const location = v.location.trim();
       const hasDuration = v.hours != null || v.minutes != null;
-      const { id, createdAt, date: savedDate } = this.entry();
+      const { id, createdAt, notes, date: savedDate } = this.entry();
       // Rebuild so cleared optional fields are dropped.
       this.store.replace({
         id,
         createdAt,
+        ...(notes ? { notes } : {}), // entry notes are edited separately; keep them
         type: 'move',
         date: dateControl.valid ? v.date : savedDate,
         activity: v.activity,

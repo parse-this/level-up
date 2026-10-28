@@ -10,7 +10,12 @@ import {
   ACTIVITY_LABELS,
   Activity,
   Entry,
+  GOLF_FORMAT_LABELS,
   NewEntry,
+  SPORTS,
+  SPORT_ICONS,
+  SPORT_LABELS,
+  Sport,
   countSets,
   entryIcon,
   entryLabel,
@@ -36,6 +41,9 @@ export class EntryList {
 
   protected readonly activities = ACTIVITIES;
   protected readonly activityLabels = ACTIVITY_LABELS;
+  protected readonly sports = SPORTS;
+  protected readonly sportLabels = SPORT_LABELS;
+  protected readonly sportIcons = SPORT_ICONS;
   protected readonly icon = entryIcon;
   protected readonly label = entryLabel;
 
@@ -49,6 +57,10 @@ export class EntryList {
 
   protected newWeighIn(): void {
     this.open({ type: 'weigh-in', date: today() });
+  }
+
+  protected newSport(sport: Sport): void {
+    this.open({ type: 'sport', date: today(), sport });
   }
 
   /** Workout title is its name if set; otherwise the type label. */
@@ -72,6 +84,10 @@ export class EntryList {
         break;
       case 'weigh-in':
         parts.push(e.weight != null ? `${e.weight} lb` : 'No weight yet');
+        break;
+      case 'sport':
+        parts.push(e.format ? GOLF_FORMAT_LABELS[e.format] : 'Not set up yet');
+        if (e.score != null) parts.push(`Score ${e.score}`);
         break;
     }
     return parts.join(' · ');

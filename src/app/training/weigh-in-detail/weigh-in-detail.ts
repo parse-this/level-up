@@ -68,10 +68,11 @@ export class WeighInDetail {
       // An invalid weight isn't saved; a blank date keeps the saved one so the weight still saves.
       if (this.form.controls.weight.invalid) return;
       const { date, weight } = this.form.getRawValue();
-      const { id, createdAt, date: savedDate } = this.entry();
+      const { id, createdAt, notes, date: savedDate } = this.entry();
       this.store.replace({
         id,
         createdAt,
+        ...(notes ? { notes } : {}), // entry notes are edited separately; keep them
         type: 'weigh-in',
         date: this.form.controls.date.valid ? date : savedDate,
         ...(weight != null ? { weight } : {}),

@@ -58,6 +58,8 @@ interface EntryBase {
   date: string;
   /** ISO timestamp of when the entry was created. */
   createdAt: string;
+  /** Free-text notes about the whole entry (trimmed; omitted when empty). */
+  notes?: string;
 }
 
 export interface WorkoutEntry extends EntryBase {
@@ -83,7 +85,30 @@ export interface WeighInEntry extends EntryBase {
   weight?: number;
 }
 
-export type Entry = WorkoutEntry | MoveEntry | WeighInEntry;
+export const SPORTS = ['golf'] as const;
+export type Sport = (typeof SPORTS)[number];
+export const SPORT_LABELS: Record<Sport, string> = { golf: 'Golf' };
+export const SPORT_ICONS: Record<Sport, string> = { golf: 'golf_course' };
+
+export const GOLF_FORMATS = ['practice', '9-holes', '18-holes'] as const;
+export type GolfFormat = (typeof GOLF_FORMATS)[number];
+export const GOLF_FORMAT_LABELS: Record<GolfFormat, string> = {
+  practice: 'Practice',
+  '9-holes': '9 holes',
+  '18-holes': '18 holes',
+};
+
+/** A sport session. Golf for now; more sports can add their own fields. */
+export interface SportEntry extends EntryBase {
+  type: 'sport';
+  sport: Sport;
+  /** Golf: missing until picked. */
+  format?: GolfFormat;
+  /** Golf: strokes for a 9- or 18-hole round (not kept for practice). */
+  score?: number;
+}
+
+export type Entry = WorkoutEntry | MoveEntry | WeighInEntry | SportEntry;
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 export type NewEntry = DistributiveOmit<Entry, 'id' | 'createdAt'>;
@@ -127,6 +152,8 @@ export function entryLabel(entry: Entry): string {
       return ACTIVITY_LABELS[entry.activity];
     case 'weigh-in':
       return 'Weigh-in';
+    case 'sport':
+      return SPORT_LABELS[entry.sport];
   }
 }
 
@@ -139,6 +166,8 @@ export function entryIcon(entry: Entry): string {
       return `directions_${entry.activity}`;
     case 'weigh-in':
       return 'monitor_weight';
+    case 'sport':
+      return SPORT_ICONS[entry.sport];
   }
 }
 
