@@ -217,6 +217,62 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       expect(text('.quest .mini-tag')).toEqual(['Errands', 'Home']);
     });
 
+    it('new quests start with the filtered tag (Capture resets to it after each add)', async () => {
+      const work = store().createTag('Work');
+      const home = store().createTag('Home');
+      const { el, text, type, stable } = await open('/quests');
+      const tagChip = (name: string) =>
+        Array.from(el().querySelectorAll<HTMLElement>('.tag-chip')).find((c) => c.textContent?.includes(name))!;
+      const add = async (title: string) => {
+        await type('.capture-input', title);
+        el().querySelector('form.capture')!.dispatchEvent(new Event('submit'));
+        await stable();
+      };
+
+      tagChip('Work').click();
+      await stable();
+      expect(text('.capture .tag-picker-trigger')).toEqual(['sell Tags (1)']);
+      await add('Send report');
+      expect(store().open()[0].tagIds).toEqual([work.id]);
+      expect(text('.capture .tag-picker-trigger')).toEqual(['sell Tags (1)']);
+
+      tagChip('Home').click();
+      await stable();
+      await add('Fix sink');
+      expect(store().open()[0].tagIds).toEqual([home.id]);
+
+      tagChip('Home').click(); // clears the filter
+      await stable();
+      await add('Untagged');
+      expect(store().open()[0].tagIds).toEqual([]);
+    });
+
+    it('Capture options collapse and stay collapsed next time', async () => {
+      const first = await open('/quests');
+      expect(first.el().querySelector('.capture-when')).toBeTruthy();
+      expect(first.el().querySelectorAll('.capture .add').length).toBe(1);
+      await first.click('.capture-toggle');
+      expect(first.el().querySelector('.capture-when')).toBeNull();
+      expect(first.el().querySelector('.capture .tag-picker-trigger')).toBeNull();
+      expect(first.el().querySelector('.capture-toggle')!.getAttribute('aria-expanded')).toBe('false');
+
+      // Adding still works while collapsed.
+      await first.type('.capture-input', 'Quick one');
+      first.el().querySelector('form.capture')!.dispatchEvent(new Event('submit'));
+      await first.stable();
+      expect(store().open().map((q) => q.title)).toEqual(['Quick one']);
+      expect(localStorage.getItem('levelUpTracker.settings.questCaptureCollapsed')).toBe('true');
+    });
+
+    it('opens with Capture collapsed when it was left collapsed', async () => {
+      localStorage.setItem('levelUpTracker.settings.questCaptureCollapsed', 'true');
+      const { el, click } = await open('/quests');
+      expect(el().querySelector('.capture-when')).toBeNull();
+      await click('.capture-toggle');
+      expect(el().querySelector('.capture-when')).toBeTruthy();
+      expect(localStorage.getItem('levelUpTracker.settings.questCaptureCollapsed')).toBe('false');
+    });
+
     it('filters by horizon and tag, with counts', async () => {
       const tag = store().createTag('Work');
       // Distinct capture times so newest-first order is certain.

@@ -23,8 +23,27 @@
   background-color: var(--mat-sys-surface-container-low);
 }
 
+// Title box, then (collapsed) Add, then the show/hide options button.
+.capture-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.capture-toggle {
+  flex-shrink: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.capture-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .capture-input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
   padding: 12px;
   border: 1px solid var(--mat-sys-outline);

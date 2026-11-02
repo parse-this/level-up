@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../core/confirm-dialog';
+import { APP_KEY_PREFIX, StorageService } from '../../core/storage.service';
 import { localDay } from '../../core/xp';
 import { groupByDay, today } from '../../training/entry';
 import {
@@ -27,6 +28,9 @@ import { QuestStore } from '../quest.store';
 import { ManageTags } from '../manage-tags/manage-tags';
 import { TagPicker } from '../tag-picker/tag-picker';
 import { WhenChoices, WhenFirstChoice } from '../when-choices/when-choices';
+
+/** A display setting (kept in Simulation mode too, like other settings). */
+export const CAPTURE_COLLAPSED_KEY = `${APP_KEY_PREFIX}settings.questCaptureCollapsed`;
 
 /** Filter tabs: All (default; includes unsorted Inbox quests), then the sorted horizons. */
 type HorizonFilter = 'all' | SortedHorizon;
@@ -52,6 +56,7 @@ type HorizonFilter = 'all' | SortedHorizon;
 })
 export class QuestList {
   protected readonly store = inject(QuestStore);
+  private readonly storage = inject(StorageService);
   private readonly dialog = inject(MatDialog);
   private readonly confirmService = inject(ConfirmService);
   private readonly captureInput = viewChild.required<ElementRef<HTMLInputElement>>('captureInput');
@@ -62,12 +67,22 @@ export class QuestList {
 
   // ---- Capture ----
   protected readonly title = new FormControl('', { nonNullable: true });
-  protected readonly captureTags = signal<string[]>([]);
   protected readonly captureImportance = signal<Importance>('normal');
   protected readonly capturePinned = signal(false);
 
+  /** Capture's options (When, tags, importance, pin) hidden; remembered on this device. */
+  protected readonly captureCollapsed = signal(this.storage.load(CAPTURE_COLLAPSED_KEY, false));
+
   // ---- Filters ----
   protected readonly horizon = signal<HorizonFilter>('all');
+  protected readonly tagFilter = signal<string | null>(null);
+
+  /** Capture's tags: start with the tag being filtered by (if any), so new quests stay in view. */
+  protected readonly captureTags = linkedSignal<string[]>(() => this.defaultCaptureTags());
+  private defaultCaptureTags(): string[] {
+    const t = this.tagFilter();
+    return t ? [t] : [];
+  }
 
   /**
    * Capture's "When" (null = none picked → unsorted Inbox). Starts on the tab being viewed
@@ -78,7 +93,6 @@ export class QuestList {
     const h = this.horizon();
     return h === 'all' ? null : h;
   }
-  protected readonly tagFilter = signal<string | null>(null);
 
   private readonly inHorizon = (l: Quest, h: HorizonFilter) => h === 'all' || l.horizon === h;
   private readonly hasTag = (l: Quest, t: string | null) => !t || l.tagIds.includes(t);
@@ -146,11 +160,16 @@ export class QuestList {
       pinned: this.capturePinned(),
     });
     this.title.setValue('');
-    this.captureTags.set([]);
+    this.captureTags.set(this.defaultCaptureTags());
     this.captureImportance.set('normal');
     this.capturePinned.set(false);
     this.captureHorizon.set(this.defaultCaptureHorizon());
     this.captureInput().nativeElement.focus();
+  }
+
+  protected toggleCapture(): void {
+    this.captureCollapsed.update((c) => !c);
+    this.storage.save(CAPTURE_COLLAPSED_KEY, this.captureCollapsed());
   }
 
   protected cycleImportance(): void {

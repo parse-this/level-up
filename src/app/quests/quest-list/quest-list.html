@@ -1,53 +1,76 @@
 <div class="page">
   <!-- Quick capture: top on desktop, docked above the bottom nav on phones. -->
-  <form class="capture" (submit)="$event.preventDefault(); capture()">
-    <input
-      #captureInput
-      class="capture-input"
-      [formControl]="title"
-      placeholder="What's on your mind?"
-      aria-label="New quest"
-      autocomplete="off"
-      enterkeyhint="done"
-    />
-    <app-when-choices
-      class="capture-when"
-      [value]="captureHorizon()"
-      (valueChange)="setCaptureHorizon($event)"
-      clearable
-      ariaLabel="When (optional)"
-    />
-    <div class="capture-actions">
-      <app-tag-picker [(selected)]="captureTags" />
-      <button
-        matButton="outlined"
-        type="button"
-        class="importance-toggle"
-        [class.important]="captureImportance() === 'important'"
-        [class.urgent]="captureImportance() === 'urgent'"
-        (click)="cycleImportance()"
-        [attr.aria-label]="'Importance: ' + importanceLabels[captureImportance()] + '. Tap to change.'"
-      >
-        <mat-icon fontSet="material-symbols-outlined">{{
-          importanceIcons[captureImportance()] || 'label_important'
-        }}</mat-icon>
-        {{ importanceLabels[captureImportance()] }}
-      </button>
+  <form class="capture" [class.collapsed]="captureCollapsed()" (submit)="$event.preventDefault(); capture()">
+    <div class="capture-row">
+      <input
+        #captureInput
+        class="capture-input"
+        [formControl]="title"
+        placeholder="What's on your mind?"
+        aria-label="New quest"
+        autocomplete="off"
+        enterkeyhint="done"
+      />
+      @if (captureCollapsed()) {
+        <button matButton="filled" type="submit" class="add" [disabled]="!title.value.trim()">Add</button>
+      }
       <button
         matIconButton
         type="button"
-        class="capture-pin"
-        [class.pinned]="capturePinned()"
-        (click)="capturePinned.set(!capturePinned())"
-        [attr.aria-pressed]="capturePinned()"
-        aria-label="Pin to the top"
-        [title]="capturePinned() ? 'Will be pinned' : 'Pin to the top'"
+        class="capture-toggle"
+        (click)="toggleCapture()"
+        [attr.aria-expanded]="!captureCollapsed()"
+        aria-controls="capture-options"
+        [attr.aria-label]="captureCollapsed() ? 'Show options' : 'Hide options'"
+        [title]="captureCollapsed() ? 'Show options' : 'Hide options'"
       >
-        <mat-icon fontSet="material-symbols-outlined">push_pin</mat-icon>
+        <mat-icon fontSet="material-symbols-outlined">{{
+          captureCollapsed() ? 'expand_more' : 'expand_less'
+        }}</mat-icon>
       </button>
-      <span class="spacer"></span>
-      <button matButton="filled" type="submit" class="add" [disabled]="!title.value.trim()">Add</button>
     </div>
+    @if (!captureCollapsed()) {
+      <div class="capture-options" id="capture-options">
+        <app-when-choices
+          class="capture-when"
+          [value]="captureHorizon()"
+          (valueChange)="setCaptureHorizon($event)"
+          clearable
+          ariaLabel="When (optional)"
+        />
+        <div class="capture-actions">
+          <app-tag-picker [(selected)]="captureTags" />
+          <button
+            matButton="outlined"
+            type="button"
+            class="importance-toggle"
+            [class.important]="captureImportance() === 'important'"
+            [class.urgent]="captureImportance() === 'urgent'"
+            (click)="cycleImportance()"
+            [attr.aria-label]="'Importance: ' + importanceLabels[captureImportance()] + '. Tap to change.'"
+          >
+            <mat-icon fontSet="material-symbols-outlined">{{
+              importanceIcons[captureImportance()] || 'label_important'
+            }}</mat-icon>
+            {{ importanceLabels[captureImportance()] }}
+          </button>
+          <button
+            matIconButton
+            type="button"
+            class="capture-pin"
+            [class.pinned]="capturePinned()"
+            (click)="capturePinned.set(!capturePinned())"
+            [attr.aria-pressed]="capturePinned()"
+            aria-label="Pin to the top"
+            [title]="capturePinned() ? 'Will be pinned' : 'Pin to the top'"
+          >
+            <mat-icon fontSet="material-symbols-outlined">push_pin</mat-icon>
+          </button>
+          <span class="spacer"></span>
+          <button matButton="filled" type="submit" class="add" [disabled]="!title.value.trim()">Add</button>
+        </div>
+      </div>
+    }
   </form>
 
   <div class="filters">
