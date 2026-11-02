@@ -35,6 +35,22 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+// Collapsed: the tag(s) new quests will get, since the tag picker is hidden.
+.capture-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding-left: 4px;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .capture-options {
   display: flex;
   flex-direction: column;

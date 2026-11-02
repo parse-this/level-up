@@ -29,6 +29,15 @@
         }}</mat-icon>
       </button>
     </div>
+    @if (captureCollapsed() && captureTags().length) {
+      <div class="capture-tags">
+        <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">sell</mat-icon>
+        <span class="visually-hidden">New quests will be tagged</span>
+        @for (t of captureTags(); track t) {
+          <span class="mini-tag">{{ tagName(t) }}</span>
+        }
+      </div>
+    }
     @if (!captureCollapsed()) {
       <div class="capture-options" id="capture-options">
         <app-when-choices

@@ -264,6 +264,21 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       expect(localStorage.getItem('levelUpTracker.settings.questCaptureCollapsed')).toBe('true');
     });
 
+    it('collapsed Capture shows the tag new quests will get', async () => {
+      store().createTag('Work');
+      localStorage.setItem('levelUpTracker.settings.questCaptureCollapsed', 'true');
+      const { el, text, click, stable } = await open('/quests');
+      expect(el().querySelector('.capture-tags')).toBeNull(); // no tag filter → nothing to show
+
+      Array.from(el().querySelectorAll<HTMLElement>('.tag-chip')).find((c) => c.textContent?.includes('Work'))!.click();
+      await stable();
+      expect(text('.capture-tags .mini-tag')).toEqual(['Work']);
+      expect(text('.capture-tags .visually-hidden')).toEqual(['New quests will be tagged']);
+
+      await click('.capture-toggle'); // expanded: the tag picker shows it instead
+      expect(el().querySelector('.capture-tags')).toBeNull();
+    });
+
     it('opens with Capture collapsed when it was left collapsed', async () => {
       localStorage.setItem('levelUpTracker.settings.questCaptureCollapsed', 'true');
       const { el, click } = await open('/quests');
