@@ -1,4 +1,13 @@
-import { Component, ElementRef, computed, inject, linkedSignal, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  afterNextRender,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -63,6 +72,12 @@ export class QuestList {
   private readonly dialog = inject(MatDialog);
   private readonly confirmService = inject(ConfirmService);
   private readonly captureInput = viewChild.required<ElementRef<HTMLInputElement>>('captureInput');
+
+  constructor() {
+    // Ready to capture: the cursor starts in the new-quest box (no scroll jump on phones,
+    // where it's docked at the bottom).
+    afterNextRender(() => this.captureInput().nativeElement.focus({ preventScroll: true }));
+  }
 
   protected readonly allChoice: WhenFirstChoice = { value: 'all', label: 'All' };
   protected readonly importanceLabels = IMPORTANCE_LABELS;

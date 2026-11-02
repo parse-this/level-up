@@ -247,6 +247,11 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       expect(store().open()[0].tagIds).toEqual([]);
     });
 
+    it('opens with the cursor in the new-quest box', async () => {
+      const { el } = await open('/quests');
+      expect(document.activeElement).toBe(el().querySelector('.capture-input'));
+    });
+
     it('Capture options collapse and stay collapsed next time', async () => {
       const first = await open('/quests');
       expect(first.el().querySelector('.capture-when')).toBeTruthy();
