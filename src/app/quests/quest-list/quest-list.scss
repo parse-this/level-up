@@ -135,6 +135,18 @@
   font: var(--mat-sys-label-small);
 }
 
+// Tag chips, then search on the right (it opens into a field; wraps below when there's no room).
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+
+  .search {
+    margin-left: auto;
+  }
+}
+
 .tag-filters {
   display: flex;
   flex-wrap: wrap;

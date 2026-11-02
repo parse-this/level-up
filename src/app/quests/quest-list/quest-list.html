@@ -92,24 +92,27 @@
       ariaLabel="Horizon"
     />
 
-    @if (store.tags().length) {
-      <div class="tag-filters" role="group" aria-label="Filter by tag">
-        @for (t of store.tags(); track t.id) {
-          <button
-            type="button"
-            class="tag-chip"
-            [class.active]="tagFilter() === t.id"
-            [attr.aria-pressed]="tagFilter() === t.id"
-            (click)="setTagFilter(t.id)"
-          >
-            {{ t.name }} <span class="count">{{ tagCounts().get(t.id) ?? 0 }}</span>
+    <div class="tag-row">
+      @if (store.tags().length) {
+        <div class="tag-filters" role="group" aria-label="Filter by tag">
+          @for (t of store.tags(); track t.id) {
+            <button
+              type="button"
+              class="tag-chip"
+              [class.active]="tagFilter() === t.id"
+              [attr.aria-pressed]="tagFilter() === t.id"
+              (click)="setTagFilter(t.id)"
+            >
+              {{ t.name }} <span class="count">{{ tagCounts().get(t.id) ?? 0 }}</span>
+            </button>
+          }
+          <button matIconButton type="button" class="manage-tags" (click)="manageTags()" aria-label="Manage tags">
+            <mat-icon fontSet="material-symbols-outlined">more_horiz</mat-icon>
           </button>
-        }
-        <button matIconButton type="button" class="manage-tags" (click)="manageTags()" aria-label="Manage tags">
-          <mat-icon fontSet="material-symbols-outlined">more_horiz</mat-icon>
-        </button>
-      </div>
-    }
+        </div>
+      }
+      <app-search-box class="search" [(query)]="search" label="Search quests" placeholder="Title, notes, tags…" />
+    </div>
   </div>
 
   <!-- One open-quest row (pinned or not). Pinned rows show a pin instead of the complete button. -->
@@ -185,7 +188,7 @@
   </ul>
 
   @if (closedVisible().length) {
-    <mat-expansion-panel class="closed">
+    <mat-expansion-panel class="closed" [expanded]="searching()">
       <mat-expansion-panel-header>
         <mat-panel-title>Completed ({{ closedVisible().length }})</mat-panel-title>
       </mat-expansion-panel-header>

@@ -288,6 +288,66 @@ describe('Quest Log', { timeout: 15_000 }, () => {
       expect(localStorage.getItem('levelUpTracker.settings.questCaptureCollapsed')).toBe('false');
     });
 
+    describe('search', () => {
+      const setup = async () => {
+        const golf = store().createTag('Golf');
+        const dentist = store().add('Call dentist');
+        store().update({ ...dentist, horizon: 'someday' });
+        store().add('Club distances', { tagIds: [golf.id], pinned: true });
+        const notes = store().add('Buy gift');
+        store().update({ ...notes, notes: '<p>Ideas: <b>golf</b> balls &amp; tees</p>', horizon: 'now' });
+        const done = store().add('Book tee time');
+        store().close(done.id);
+        const page = await open('/quests');
+        await page.click('.open-search');
+        const search = async (q: string) => {
+          const input = page.el().querySelector<HTMLInputElement>('.search-input')!;
+          input.value = q;
+          input.dispatchEvent(new Event('input'));
+          await page.stable();
+        };
+        return { ...page, search, golf };
+      };
+
+      it('matches titles, notes and tag names; completed quests too (Completed opens)', async () => {
+        const { text, el, search } = await setup();
+        await search('golf');
+        expect(text('.pinned-list .quest-title')).toEqual(['Club distances']); // tag name
+        expect(text('.quests:not(.pinned-list):not(.closed-list) .quest-title')).toEqual(['Buy gift']); // notes
+        await search('tee');
+        expect(text('.quests:not(.pinned-list):not(.closed-list) .quest-title')).toEqual(['Buy gift']);
+        expect(text('.closed-list .quest-title')).toEqual(['Book tee time']);
+        expect(el().querySelector('mat-expansion-panel.closed')!.classList).toContain('mat-expanded');
+      });
+
+      it('stays within the When tab, with counts and a hint where matches are', async () => {
+        const { text, toggle, search } = await setup();
+        await search('dentist');
+        expect(text('.horizons mat-button-toggle')).toEqual(['All 1', 'Today 0', 'Soon 0', 'Someday 1']);
+        await toggle('Today');
+        expect(text('.empty')).toEqual(['No matches in Today. 1 in All.']);
+        await toggle('Someday');
+        expect(text('.quest-title')).toEqual(['Call dentist']);
+      });
+
+      it('stays within the tag filter, with a hint', async () => {
+        const { text, el, stable, search } = await setup();
+        Array.from(el().querySelectorAll<HTMLElement>('.tag-chip')).find((c) => c.textContent?.includes('Golf'))!.click();
+        await stable();
+        await search('dentist');
+        expect(text('.empty')).toEqual(['No matches tagged Golf. 1 without the Golf filter.']);
+      });
+
+      it('✕ clears the search and closes it', async () => {
+        const { text, el, click, search } = await setup();
+        await search('dentist');
+        expect(text('.quests:not(.pinned-list):not(.closed-list) .quest-title')).toEqual(['Call dentist']);
+        await click('.close-search');
+        expect(el().querySelector('.search-input')).toBeNull();
+        expect(text('.quests:not(.pinned-list):not(.closed-list) .quest-title').length).toBe(2);
+      });
+    });
+
     it('filters by horizon and tag, with counts', async () => {
       const tag = store().createTag('Work');
       // Distinct capture times so newest-first order is certain.

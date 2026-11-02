@@ -1,5 +1,14 @@
-.new-entry {
+// New entry on the left, search on the right (it opens into a field that fills the row).
+.log-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 24px;
+}
+
+.search {
+  margin-left: auto;
 }
 
 .log {

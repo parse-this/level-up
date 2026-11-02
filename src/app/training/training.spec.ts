@@ -178,6 +178,40 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
       expect(text('.entry-title')).toEqual(['Rest day']);
       expect(el().querySelector('.empty-badge')).toBeNull();
     });
+
+    it('search: a lens until tapped, then filters by name, exercise, place, type and notes', async () => {
+      store().create({ type: 'workout', date: '2026-10-05', name: 'Push day', exercises: [{ id: 'a', name: 'Bench press', steps: [] }] });
+      store().create({ type: 'move', date: '2026-10-04', activity: 'run', location: 'Riverside park' });
+      store().create({ type: 'sport', sport: 'golf', date: '2026-10-03', format: '18-holes', location: 'Pine Hills' });
+      store().create({ type: 'weigh-in', date: '2026-10-02', weight: 180, notes: 'After breakfast' });
+      const { el, text, click, stable } = await open('/training');
+      expect(el().querySelector('.search-input')).toBeNull();
+
+      await click('.open-search');
+      const input = el().querySelector<HTMLInputElement>('.search-input')!;
+      expect(document.activeElement).toBe(input);
+      const search = async (q: string) => {
+        input.value = q;
+        input.dispatchEvent(new Event('input'));
+        await stable();
+        return text('.entry-title');
+      };
+
+      expect(await search('bench')).toEqual(['Push day']);
+      expect(await search('PUSH ben')).toEqual(['Push day']);
+      expect(await search('river')).toEqual(['Run']);
+      expect(await search('run')).toEqual(['Run']);
+      expect(await search('golf 18')).toEqual(['Golf']);
+      expect(await search('breakfast')).toEqual(['Weigh-in notes']); // "notes" is its notes icon
+      expect(await search('swim')).toEqual([]);
+      expect(text('.empty')).toEqual(['No entries match "swim".']);
+
+      // Esc clears it and goes back to the lens.
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      await stable();
+      expect(el().querySelector('.search-input')).toBeNull();
+      expect(text('.entry-title')).toEqual(['Push day', 'Run', 'Golf', 'Weigh-in notes']);
+    });
   });
 
   describe('entry detail', () => {

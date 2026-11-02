@@ -10,6 +10,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../core/confirm-dialog';
 import { APP_KEY_PREFIX, StorageService } from '../../core/storage.service';
+import { SearchBox } from '../../core/search-box';
+import { htmlToText, matchesSearch, searchText, searchWords } from '../../core/search';
 import { localDay } from '../../core/xp';
 import { groupByDay, today } from '../../training/entry';
 import {
@@ -45,6 +47,7 @@ type HorizonFilter = 'all' | SortedHorizon;
     MatIconModule,
     TagPicker,
     WhenChoices,
+    SearchBox,
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
@@ -94,23 +97,44 @@ export class QuestList {
     return h === 'all' ? null : h;
   }
 
+  /** Search text ('' = not searching). Works within the When tab and tag filter. Not remembered. */
+  protected readonly search = signal('');
+  private readonly words = computed(() => searchWords(this.search()));
+  protected readonly searching = computed(() => this.words().length > 0);
+
+  /** Each quest's searchable text: title, notes (as plain text) and tag names. */
+  private readonly searchTexts = computed(() => {
+    const texts = new Map<string, string>();
+    for (const l of [...this.store.open(), ...this.store.closed()]) {
+      texts.set(l.id, searchText([l.title, htmlToText(l.notes), ...l.tagIds.map((t) => this.tagName(t))]));
+    }
+    return texts;
+  });
+
   private readonly inHorizon = (l: Quest, h: HorizonFilter) => h === 'all' || l.horizon === h;
   private readonly hasTag = (l: Quest, t: string | null) => !t || l.tagIds.includes(t);
+  private readonly matches = (l: Quest) =>
+    !this.searching() || matchesSearch(this.words(), this.searchTexts().get(l.id) ?? '');
+
+  /** Open quests matching the search (before the When tab and tag filters). */
+  private readonly openMatches = computed(() => this.store.open().filter(this.matches));
 
   /** Open, unpinned quests in the current When tab and tag. */
   protected readonly visible = computed(() =>
-    this.store
-      .open()
-      .filter((l) => !l.pinned && this.inHorizon(l, this.horizon()) && this.hasTag(l, this.tagFilter())),
+    this.openMatches().filter(
+      (l) => !l.pinned && this.inHorizon(l, this.horizon()) && this.hasTag(l, this.tagFilter()),
+    ),
   );
 
   /** Pinned quests: on top in every When tab (tag filter still applies). */
   protected readonly pinnedVisible = computed(() =>
-    this.store.open().filter((l) => l.pinned && this.hasTag(l, this.tagFilter())),
+    this.openMatches().filter((l) => l.pinned && this.hasTag(l, this.tagFilter())),
   );
 
   protected readonly closedVisible = computed(() =>
-    this.store.closed().filter((l) => this.inHorizon(l, this.horizon()) && this.hasTag(l, this.tagFilter())),
+    this.store
+      .closed()
+      .filter((l) => this.inHorizon(l, this.horizon()) && this.hasTag(l, this.tagFilter()) && this.matches(l)),
   );
 
   /** Completed quests in Today / Yesterday / Earlier groups by the day they were completed (like the Training Ground log). */
@@ -123,7 +147,7 @@ export class QuestList {
 
   /** Open, unpinned quests per horizon, within the current tag filter (pinned show on every tab). */
   protected readonly horizonCounts = computed(() => {
-    const open = this.store.open().filter((l) => !l.pinned && this.hasTag(l, this.tagFilter()));
+    const open = this.openMatches().filter((l) => !l.pinned && this.hasTag(l, this.tagFilter()));
     const counts = { all: open.length } as Record<HorizonFilter, number>;
     for (const h of SORTED_HORIZONS) counts[h] = open.filter((l) => l.horizon === h).length;
     return counts;
@@ -132,7 +156,7 @@ export class QuestList {
   /** Open quests per tag that the current When tab shows (pinned always count). */
   protected readonly tagCounts = computed(() => {
     const counts = new Map<string, number>();
-    for (const l of this.store.open()) {
+    for (const l of this.openMatches()) {
       if (!l.pinned && !this.inHorizon(l, this.horizon())) continue;
       for (const t of l.tagIds) counts.set(t, (counts.get(t) ?? 0) + 1);
     }
@@ -140,6 +164,7 @@ export class QuestList {
   });
 
   protected readonly emptyMessage = computed(() => {
+    if (this.searching()) return this.noMatchesMessage();
     const tag = this.tagFilter() && this.store.tagById(this.tagFilter()!);
     if (tag) return `No open quests tagged ${tag.name}.`;
     switch (this.horizon()) {
@@ -149,6 +174,25 @@ export class QuestList {
         return `Nothing in ${HORIZON_LABELS[this.horizon() as Horizon]} yet.`;
     }
   });
+
+  /**
+   * Search found nothing here: say where it did find matches, if anywhere —
+   * in All (other When tabs), or without the tag filter.
+   */
+  private noMatchesMessage(): string {
+    const tagId = this.tagFilter();
+    const tag = tagId ? this.store.tagById(tagId)?.name : null;
+    const label = this.horizon() !== 'all' ? HORIZON_LABELS[this.horizon() as Horizon] : null;
+    const where = (label ? ` in ${label}` : '') + (tag ? ` tagged ${tag}` : '');
+    const none = where ? `No matches${where}.` : 'No open quests match.';
+    const unpinned = this.openMatches().filter((l) => !l.pinned);
+    const inAll = unpinned.filter((l) => this.hasTag(l, tagId)).length;
+    if (this.horizon() !== 'all' && inAll) return `${none} ${inAll} in All.`;
+    const otherTags = unpinned.filter((l) => this.inHorizon(l, this.horizon())).length;
+    if (tag && otherTags) return `${none} ${otherTags} without the ${tag} filter.`;
+    if (tag && unpinned.length) return `${none} ${unpinned.length} in All without the ${tag} filter.`;
+    return none;
+  }
 
   protected capture(): void {
     const title = this.title.value.trim();

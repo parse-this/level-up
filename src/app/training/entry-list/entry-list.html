@@ -1,7 +1,15 @@
-<button matButton="filled" type="button" class="new-entry" [matMenuTriggerFor]="newMenu.menu()">
-  <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
-  New entry
-</button>
+<div class="log-head">
+  <button matButton="filled" type="button" class="new-entry" [matMenuTriggerFor]="newMenu.menu()">
+    <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+    New entry
+  </button>
+  <app-search-box
+    class="search"
+    [(query)]="search"
+    label="Search the log"
+    placeholder="Name, exercise, place, notes…"
+  />
+</div>
 <app-entry-type-menu #newMenu (picked)="newEntry($event)" />
 
 <nav class="log" aria-label="Log">
@@ -41,6 +49,10 @@
       </div>
     </section>
   } @empty {
-    <p class="empty">Nothing logged yet. Press Start: tap "New entry".</p>
+    @if (search().trim()) {
+      <p class="empty">No entries match "{{ search().trim() }}".</p>
+    } @else {
+      <p class="empty">Nothing logged yet. Press Start: tap "New entry".</p>
+    }
   }
 </nav>
