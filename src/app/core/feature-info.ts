@@ -25,8 +25,9 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
     points: [
       'Workouts: exercises with sets, reps, weights, machine settings and rests. Name a workout (like "Push day") and next time it shows what you did last time.',
       'Get Moving: walks, runs and bike rides, with time, distance and place.',
-      'Sports: golf for now: practice, 9 or 18 holes, with your score.',
+      'Sports: golf for now: 18 or 9 holes with your score, or other (range, lessons), and where you played.',
       'Weigh-ins: your weight, and when you weighed in.',
+      'Rest days: a planned day off. It keeps your streak going, so recovering never costs you.',
     ],
     outro:
       'Log as you go. Suggestions and auto-fill from your past sessions keep it quick, and every session earns XP toward your level.',

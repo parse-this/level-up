@@ -86,17 +86,26 @@ export interface WeighInEntry extends EntryBase {
   weight?: number;
 }
 
+/**
+ * A deliberate rest day: nothing to report, but the day counts toward the streak
+ * (no XP of its own). Just a date and optional notes.
+ */
+export interface RestEntry extends EntryBase {
+  type: 'rest';
+}
+
 export const SPORTS = ['golf'] as const;
 export type Sport = (typeof SPORTS)[number];
 export const SPORT_LABELS: Record<Sport, string> = { golf: 'Golf' };
 export const SPORT_ICONS: Record<Sport, string> = { golf: 'golf_course' };
 
-export const GOLF_FORMATS = ['practice', '9-holes', '18-holes'] as const;
+/** Button order. `practice` is shown as "Other" (range, lesson…); the saved value stays `practice`. */
+export const GOLF_FORMATS = ['18-holes', '9-holes', 'practice'] as const;
 export type GolfFormat = (typeof GOLF_FORMATS)[number];
 export const GOLF_FORMAT_LABELS: Record<GolfFormat, string> = {
-  practice: 'Practice',
-  '9-holes': '9 holes',
   '18-holes': '18 holes',
+  '9-holes': '9 holes',
+  practice: 'Other',
 };
 
 /** A sport session. Golf for now; more sports can add their own fields. */
@@ -105,11 +114,13 @@ export interface SportEntry extends EntryBase {
   sport: Sport;
   /** Golf: missing until picked. */
   format?: GolfFormat;
-  /** Golf: strokes for a 9- or 18-hole round (not kept for practice). */
+  /** Golf: strokes for a 9- or 18-hole round (not kept for Other). */
   score?: number;
+  /** Course or range name (trimmed; omitted when blank). */
+  location?: string;
 }
 
-export type Entry = WorkoutEntry | MoveEntry | WeighInEntry | SportEntry;
+export type Entry = WorkoutEntry | MoveEntry | WeighInEntry | SportEntry | RestEntry;
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 export type NewEntry = DistributiveOmit<Entry, 'id' | 'createdAt'>;
@@ -126,7 +137,7 @@ export interface EntryTypeOption {
   init: EntryTypeInit;
 }
 
-/** Menu order: Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in. */
+/** Menu order: Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in | Rest day. */
 export const ENTRY_TYPE_OPTIONS: EntryTypeOption[] = [
   { label: 'Workout', icon: 'fitness_center', init: { type: 'workout', exercises: [] } },
   ...ACTIVITIES.map((activity) => ({
@@ -142,6 +153,7 @@ export const ENTRY_TYPE_OPTIONS: EntryTypeOption[] = [
     init: { type: 'sport' as const, sport },
   })),
   { label: 'Weigh-in', icon: 'monitor_weight', init: { type: 'weigh-in' } },
+  { label: 'Rest day', icon: 'bedtime', init: { type: 'rest' } },
 ];
 
 /** Same type (and same activity / sport): changing to it would do nothing. */
@@ -179,8 +191,14 @@ export function droppedFields(entry: Entry): string[] {
       ];
     case 'weigh-in':
       return entry.weight != null ? ['weight'] : [];
+    case 'rest':
+      return [];
     case 'sport':
-      return [...(entry.format ? ['type'] : []), ...(entry.score != null ? ['score'] : [])];
+      return [
+        ...(entry.format ? ['type'] : []),
+        ...(entry.score != null ? ['score'] : []),
+        ...(entry.location ? ['location'] : []),
+      ];
   }
 }
 
@@ -226,12 +244,15 @@ export function describeDropped(entry: Entry): string | null {
       );
     case 'weigh-in':
       return `${from}${entry.weight} lb`;
+    case 'rest':
+      return null; // nothing to keep
     case 'sport':
       return (
         from +
         [
           ...(entry.format ? [GOLF_FORMAT_LABELS[entry.format]] : []),
           ...(entry.score != null ? [`Score ${entry.score}`] : []),
+          ...(entry.location ? [entry.location] : []),
         ].join(' · ')
       );
   }
@@ -267,6 +288,25 @@ export function formatDistance(miles: number): string {
   return `${Number(miles.toFixed(2))} mi`;
 }
 
+/**
+ * Nothing filled in yet (notes don't count). Empty entries earn no XP and get an
+ * "Empty entry" badge in the log.
+ */
+export function isEmptyEntry(entry: Entry): boolean {
+  switch (entry.type) {
+    case 'workout':
+      return !entry.exercises.length; // a name alone isn't enough
+    case 'move':
+      return !entry.location && entry.durationMinutes == null && entry.distance == null;
+    case 'weigh-in':
+      return entry.weight == null;
+    case 'rest':
+      return false; // resting is the whole point
+    case 'sport':
+      return entry.format == null;
+  }
+}
+
 /** "Workout", "Run", "Weigh-in"... */
 export function entryLabel(entry: Entry): string {
   switch (entry.type) {
@@ -276,6 +316,8 @@ export function entryLabel(entry: Entry): string {
       return ACTIVITY_LABELS[entry.activity];
     case 'weigh-in':
       return 'Weigh-in';
+    case 'rest':
+      return 'Rest day';
     case 'sport':
       return SPORT_LABELS[entry.sport];
   }
@@ -290,6 +332,8 @@ export function entryIcon(entry: Entry): string {
       return `directions_${entry.activity}`;
     case 'weigh-in':
       return 'monitor_weight';
+    case 'rest':
+      return 'bedtime';
     case 'sport':
       return SPORT_ICONS[entry.sport];
   }

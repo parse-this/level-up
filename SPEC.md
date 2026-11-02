@@ -72,6 +72,7 @@ src/app/
   training/workout-detail/          WorkoutDetail
   training/move-detail/             MoveDetail (Get Moving)
   training/weigh-in-detail/         WeighInDetail
+  training/rest-detail/             RestDetail
   training/sport-detail/            SportDetail (golf)
   training/entry-type-menu/         EntryTypeMenu (shared New entry / Change type menu)
   training/exercise-form/           ExerciseForm
@@ -122,14 +123,14 @@ The app running on sample data, kept in its own storage location so real data is
 - **State:** `SimulationService` (root; `core/simulation.service.ts`) keeps `{active, bannerDismissed}` in `levelUp.simulation` (`SIM_META_KEY`; outside both prefixes, so never in saves or listings). `active()`, `showExplanation()` (= active && !bannerDismissed; shown on every entry until closed).
 - **Start:** `provideAppInitializer(() => SimulationService.init())` runs before anything reads storage. No saved state + no own data (any `levelUpTracker.*` key other than settings) → `enter()` (first visit). No saved state + own data → saves inactive state. Saved state → used; if active, the sample data is cleared and made fresh (dated from today) on every app open, so it always shows a few weeks of use up to now (changes made in the simulation reset). So it starts by itself only on a first visit; after exiting it never starts by itself again.
 - `enter()`: clears `levelUpSim.*`, seeds fresh sample data (`makeSampleData`, dynamically imported), saves active. `exit()`: clears `levelUpSim.*`, saves inactive. `dismissExplanation()`. Callers reload the page after `enter`/`exit`.
-- **Sample data** (`core/sample-data.ts`, `makeSampleData(now)` → app key → value): ~4 weeks ending today, deterministic. Training: Push/Pull/Leg workouts Mon/Wed/Fri with rising weights (PRs), golf Saturdays (18 / 9 holes with scores), walks/runs/rides other days, weigh-ins Mon/Thu, one golf not set up; rest days every few days keep streak bonuses small. Quests: 6 tags; open quests across horizons and importances (one Urgent, notes with lists/checklists), pinned "Golf club distances" (club yardages) and "Birthdays" (12 made-up names with dates), 4 completed, one captured today. **Level must stay below 10** (test checks several dates; ≈ Lv 7 today).
+- **Sample data** (`core/sample-data.ts`, `makeSampleData(now)` → app key → value): ~4 weeks ending today, deterministic. Training: Push/Pull/Leg workouts Mon/Wed/Fri with rising weights (PRs), golf Saturdays (18 / 9 holes with scores), walks/runs/rides other days, weigh-ins Mon/Thu, golf with locations (courses, plus yesterday's "Other" range session); rest days every few days keep streak bonuses small. Quests: 6 tags; open quests across horizons and importances (one Urgent, notes with lists/checklists), pinned "Golf club distances" (club yardages) and "Birthdays" (12 made-up names with dates), 4 completed, one captured today. **Level must stay below 10** (test checks several dates; ≈ Lv 7 today).
 - **Banner** (`SimulationBanner`, `core/simulation-banner.ts`, top of `main` above the router outlet, only while active): card (radius 12px; tertiary 45% border; bg tertiary 8% over surface-container-low). While the explanation shows, `.attention` plays the Urgent quest's rotating red → orange border (`::after` 2px ring via mask, `--quest-glow-angle`) + blurred outer glow (`::before`, z-index −1; host `isolation: isolate`): 2 laps of 2.5s, fading out by 5.6s, then the normal border. Plays on each page load; none with reduced motion. Bar: `science` icon (tertiary), "Simulation mode" (title-small) / "Playing with sample data" (body-small, muted), outlined **Exit** button ("Exit simulation"; "Exit" on phones) and, while the explanation shows, a close button (aria "Close explanation") → `dismissExplanation()`. Explanation (every entry, until closed): "Why am I here?" (what it's for, the same however you got here: shows the app as it looks after a few weeks of use, filled with sample workouts, quests and XP, so you can see what each feature does and learn how to use it before starting for real), "How to use it:" (try anything; practice; separate from your data; starts fresh each time you open the app), "Ready for real?" (tap Exit; sample cleared; back to your own data and level, or a fresh start if none yet; come back from Settings → Simulation mode). Exit → `ConfirmService` (dynamically imported) "Exit Simulation mode?" / "The sample data will be cleared and you'll be back to your own data and level. You can come back any time from Settings → Simulation mode." / "Exit simulation" → `exit()` + reload.
 - **Settings → Simulation mode** (`SimulationSettings`, `settings/simulation.ts`): "← Settings"; h2; explanation (sample data kept in its own place; made fresh each time the app opens, dated up to today, changes reset then too; exiting clears it). Active: "You're in Simulation mode now." (tertiary, `science`) + filled "Exit simulation" (`logout`; same confirm, "…you'll be back to your own data.") → exit + reload. Inactive: filled "Start simulation" (`science`; disabled while seeding) → `enter()`, navigate to `/` (home), reload: same full explanation banner as a first visit.
 
 ## Features
 
 ### 1. Training Ground
-Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get Moving** (Walk/Run/Bike), **Sport** (Golf), **Weigh-in**. One type per entry.
+Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get Moving** (Walk/Run/Bike), **Sport** (Golf), **Weigh-in**, **Rest day**. One type per entry.
 - Header (in `Training` shell, all pages): row = h1 "Training Ground — Raise your stats" + `<sup class="xp-pops">` (inline-flex, wrap, gap 4px, ml 6px) of pills "+50 VIT", "+5 AGI", "+5 STR" (`.xp-pop.pixel`: bg `#21aa52` XP green, text `#04210f`, 8px pixel font, padding 3px 6px; decorative, fixed values) + ⓘ icon button (aria "What is the Training Ground?", `aria-expanded`) toggling `FeatureInfo feature="training"` (closable) below the header.
 
 #### Data (`entry.ts`)
@@ -139,10 +140,11 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
   - `WorkoutEntry`: `type:'workout'`, `name?`, `exercises` (performed order).
   - `MoveEntry`: `type:'move'`, `activity` (`ACTIVITIES = walk|run|bike`, labels Walk/Run/Bike), `location?`, `durationMinutes?`, `distance?` (mi).
   - `WeighInEntry`: `type:'weigh-in'`, `weight?` (lb; missing until entered).
-  - `SportEntry`: `type:'sport'`, `sport` (`SPORTS = golf`; labels Golf; icons `golf_course`), `format?` (`GOLF_FORMATS = practice|9-holes|18-holes`, labels Practice / 9 holes / 18 holes; missing until picked), `score?` (whole ≥1; only kept for 9/18 holes).
+  - `RestEntry`: `type:'rest'`, no fields of its own (date + notes). A deliberate day off; never empty.
+  - `SportEntry`: `type:'sport'`, `sport` (`SPORTS = golf`; labels Golf; icons `golf_course`), `format?` (`GOLF_FORMATS = 18-holes|9-holes|practice` in button order, labels 18 holes / 9 holes / Other — saved value stays `practice`; missing until picked), `score?` (whole ≥1; only kept for 9/18 holes), `location?` (trimmed, omitted when blank).
   - `Entry` = discriminated union on `type`; `NewEntry` = Entry minus `id`, `createdAt` (distributive); `EntryTypeInit` = Entry minus `EntryBase` keys (a type's blank fields, e.g. `{type:'sport', sport:'golf'}`).
-  - `ENTRY_TYPE_OPTIONS`: `{label, icon, group?, init}` in menu order Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in. `isSameKind(entry|init, init)` (same type and activity/sport), `typeLabel(init)`.
-  - Type change helpers: `droppedFields(entry)` (workout: "name", "N exercise(s)"; move: distance/time/location; weigh-in: weight; golf: type/score; only those set), `describeFields` ("a, b and c"), `describeDropped(entry)` → note "Changed from <label>: …" (workout: "Name. Exercise (setting S): 10 × 135 lb, 8 reps (Failure)."; move: "3.1 mi · 28 min · Place"; weigh-in: "181 lb"; golf: "9 holes · Score 45") or null.
+  - `ENTRY_TYPE_OPTIONS`: `{label, icon, group?, init}` in menu order Workout | Get Moving: Walk, Run, Bike | Sport: Golf | Weigh-in | Rest day (`bedtime`). `isSameKind(entry|init, init)` (same type and activity/sport), `typeLabel(init)`.
+  - Type change helpers: `droppedFields(entry)` (workout: "name", "N exercise(s)"; move: distance/time/location; weigh-in: weight; golf: type/score/location; rest: nothing; only those set), `describeFields` ("a, b and c"), `describeDropped(entry)` → note "Changed from <label>: …" (workout: "Name. Exercise (setting S): 10 × 135 lb, 8 reps (Failure)."; move: "3.1 mi · 28 min · Place"; weigh-in: "181 lb"; golf: "9 holes · Score 45 · Pine Hills") or null.
 - `matchNames(names, query, limit = 8)` (exercise and workout names): words = lowercase split on non-alphanumerics; keep names where every typed word is a prefix of some name word ("be pr" → "Bench Press"); skip exact (case-insensitive) match; keep input order; empty query → first `limit`.
 - `groupByDay(items, todayDate)` → `{key, label, items}[]` (future → Upcoming, = today → Today, day before → Yesterday, older → Earlier; keeps input order; empty groups left out).
 - Helpers: `stepLabels` ("Set 1", "Rest 1", "Set 2"…), `countSets`, `totalRest`, `formatDuration` ("45 min", "1 h", "1 h 5 min"), `formatDistance` ("3.1 mi", ≤2 decimals), `entryLabel` (Workout / Walk|Run|Bike / Weigh-in / Golf), `entryIcon` (`fitness_center`, `directions_<activity>`, `monitor_weight`, `golf_course`), `today()`.
@@ -152,7 +154,9 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 - `rankNames(namesOldestFirst)`: dedupe case-insensitively (latest spelling wins), sort by use count desc then alphabetical. Derived, not stored separately (deleted ones drop out).
 - `exerciseNames` computed: `rankNames` of all exercise names.
 - `workoutNamesExcept(id)`: `rankNames` of workout names, leaving out workout `id` (its name autosaves while typing).
+- `golfLocationsExcept(id)`: `rankNames` of golf entry locations (oldest created first in), leaving out entry `id`.
 - `lastWorkoutNamed(name, excludeId)`: most recent other workout with that name (trimmed, case-insensitive); none for blank.
+- `lastWeighIn(date, excludeId)`: most recent other weigh-in that has a weight, dated on or before `date`.
 - `latestExercise(name)` → `PreviousExercise {exercise, date}` (workout date): most recent exercise with that name (trimmed, case-insensitive), scanning entries newest first; within a workout, the later exercise wins.
 - `create(NewEntry)` → adds `id`, `createdAt`; `replace(entry)`; `remove(id)`.
 - `changeType(id, next: EntryTypeInit, extraNote?)`: keeps id/date/createdAt (so log position and XP timing stay), notes + extraNote joined by a blank line; old type's fields dropped.
@@ -160,12 +164,13 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 - Each change saves. Loads from entries key (empty if missing).
 
 #### `EntryList` (log)
-- "New entry" (filled, add icon) opens the shared `EntryTypeMenu` (`[matMenuTriggerFor]="menu.menu()"`; groups get a divider + muted heading; current type marked with check + primary when given): Workout (fitness_center) | divider, muted heading "Get Moving", Walk / Run / Bike (directions_*) | divider, muted heading "Sport", Golf (golf_course) | divider, Weigh-in (monitor_weight). Each creates entry dated today (Get Moving with chosen activity; Sport with chosen sport) and navigates to it.
+- "New entry" (filled, add icon) opens the shared `EntryTypeMenu` (`[matMenuTriggerFor]="menu.menu()"`; groups get a divider + muted heading; current type marked with check + primary when given): Workout (fitness_center) | divider, muted heading "Get Moving", Walk / Run / Bike (directions_*) | divider, muted heading "Sport", Golf (golf_course) | divider, Weigh-in (monitor_weight), Rest day (bedtime; same ungrouped section, no divider). Each creates entry dated today (Get Moving with chosen activity; Sport with chosen sport) and navigates to it.
 - `nav.log` (gap 20px) of `section.day-group`s from `groupByDay(entries, today())`: `h3.group-title` (title-small, muted, uppercase, letter-spacing .8px) Upcoming / Today / Yesterday / Earlier (by entry `date`; empty groups omitted), then that group's `a.entry` rows, sorted as store: type icon (primary color), title, meta, chevron_right. Hover bg `surface-container`.
   - Title: workout name, else `entryLabel`.
-  - Meta (" · "-joined): date `EEE, MMM d, y`, then — Workout: "N exercise(s) · M set(s)"; Get Moving: distance, duration, location (each if set); Weigh-in: "W lb" or "No weight yet"; Golf: format label or "Not set up yet", then "Score S" if set.
+  - Meta (" · "-joined): date `EEE, MMM d, y`, then — Workout: "N exercise(s) · M set(s)"; Get Moving: distance, duration, location (each if set); Weigh-in: "W lb" or "No weight yet"; Golf: format label or "Not set up yet", then "Score S" and location if set.
   - Workout: comma-separated exercise names (single line, ellipsis).
   - `notes` icon (16px, muted, aria "Has notes") after the title when the entry has notes.
+  - **Empty Entry** badge (`.empty-badge`: amber pill, `warning` icon + "Empty Entry", label-small) beside the title when `isEmptyEntry(entry)` — nothing filled in (notes don't count): workout with no exercises (a name alone isn't enough); Get Moving with no distance, time or location; weigh-in with no weight; golf with no type picked. Same rule decides whether an entry earns session / weigh-in XP.
 - Empty: "Nothing logged yet. Press Start: tap "New entry"."
 
 #### `EntryDetail` (frame)
@@ -173,9 +178,9 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 - `BackRail` (`core/back-rail.ts`, inputs `link`, `label`): full-height link (`matRipple`, aria-label = label; border outline-variant, radius 12px, bg surface-container-low, muted text; hover bg surface-container-high + primary text; focus outline primary; `overflow: clip`, not `hidden`, which would break sticky). Inside (column, centered, gap 4px, padding 12px 2px): arrow_back icon + label with one word per line (label-medium, centered, aria-hidden; hidden on phones); `position: sticky; top: 16px` so it follows the page while scrolling.
 - Right: heading row = h2 containing `.type-button` (icon + `entryLabel` + CSS ▾; `matRipple`; aria "<label>. Change type") opening `EntryTypeMenu [current]=entry` + delete icon button (right); then body.
 - Change type: same kind → nothing; Walk↔Run↔Bike → only `activity` changes (details kept, `MoveDetail` follows the activity via an effect); otherwise unsaved exercise forms → "Discard unsaved exercises?"; if `droppedFields` non-empty → confirm "Change to <Type>?" / "This <label>'s <fields> will be removed. They'll be copied into its notes." / "Change"; then `store.changeType(id, next, describeDropped(entry))` and the notes box is refreshed.
-- Body by type: `WorkoutDetail` / `MoveDetail` / `WeighInDetail` / `SportDetail` (`[entry]` input).
+- Body by type: `WorkoutDetail` / `MoveDetail` / `WeighInDetail` / `SportDetail` / `RestDetail` (`[entry]` input).
 - Below the body (every type): `.entry-notes` "Notes" textarea (`cdkTextareaAutosize`, rows 3; loaded once per id; saves on each change: trimmed, blank → omitted), then `.footer` (right-aligned): muted "Saves automatically" (`cloud_done`) + filled "Done" (`check`) → `/training` (unsaved-exercise guard still applies).
-- Type detail forms that rebuild the entry (Move, Weigh-in, Sport) carry `notes` from the current entry so they never drop it.
+- Type detail forms that rebuild the entry (Move, Weigh-in, Sport, Rest) carry `notes` from the current entry so they never drop it.
 - Implements `HasUnsavedChanges` → `viewChild(WorkoutDetail)?.hasUnsavedChanges()`; false after a confirmed delete (no second prompt).
 - Delete: `ConfirmService` dialog, title "Delete <label lowercase>?" (e.g. "Delete run?"); message "Its N exercise(s) will be deleted too. This can't be undone." (workout with exercises) else "This can't be undone." → remove, navigate to log.
 - Unknown id: "Entry not found."
@@ -188,9 +193,9 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 
 #### `WorkoutDetail`
 - Details: Date + "Workout name" (placeholder "e.g. Push day"; trimmed, blank → omitted) with `mat-autocomplete` (`.workout-suggestions`) = `matchNames(store.workoutNamesExcept(id), typed)`.
-- **Last time panel** (`mat-expansion-panel.last-time`, expanded, mb 24px) when `lastWorkoutNamed(entry.name, id)` exists (typed or picked): title "Last <name>", description "<`EEE, MMM d`> · N exercise(s)"; `ExerciseCard` per exercise in original order. Action: if a same-name (case-insensitive) exercise is in this workout → `.logged` check_circle "Logged" (primary); else `+` (`add_circle`, aria "Start <name>"), disabled while a new form for that name is open → opens a draft started with that name.
-- "Exercises" (h3) list, performed order: each `ExerciseCard` with edit/delete icon buttons, or — if in `editingIds` — an in-place `ExerciseForm [exercise]` (saved → `updateExercise`, close; cancelled → close). Delete exercise: immediate (closes its form).
-- **Drafts** (new exercise forms, `.draft`) after the list: `{key, name|null}`; `ExerciseForm [startWith]=name` (saved → `addExercise`, remove; cancelled → remove). Outlined "Add exercise" (add icon) → blank draft. Any number of forms open at once.
+- **Last time panel** (`mat-expansion-panel.last-time`, starts collapsed, mb 24px) when `lastWorkoutNamed(entry.name, id)` exists (typed or picked): title "Last <name>", description "<`EEE, MMM d`> · N exercise(s)"; `ExerciseCard` per exercise in original order. Action: if a same-name (case-insensitive) exercise is in this workout → `.logged` check_circle "Logged" (primary); else `+` (`add_circle`, aria "Start <name>"), disabled while a new form for that name is open → opens a draft started with that name.
+- `.section-head` row: "Exercises" (h3) + outlined "Add exercise" (add icon, `margin-left:auto`, stays right when wrapping) → blank draft. Then the list: drafts first (see below), then exercises in performed order: each `ExerciseCard` with edit/delete icon buttons, or — if in `editingIds` — an in-place `ExerciseForm [exercise]` (saved → `updateExercise`, close; cancelled → close). Delete exercise: immediate (closes its form).
+- **Drafts** (new exercise forms, `.draft`) at the top of the list, newest first (right under Add exercise): `{key, name|null}`; `ExerciseForm [startWith]=name` (saved → `addExercise`, remove; cancelled → remove). Any number of forms open at once.
 - All forms get `[knownNames]` = `store.exerciseNames()`, `[previous]` = `name => store.latestExercise(name)`.
 - Empty (no exercises, no drafts): "No exercises yet. Press Start: pick one from last time, or add your own." (without panel: "…add your first one.").
 - `hasUnsavedChanges()` = any `viewChildren(ExerciseForm)` `.hasChanges()`.
@@ -201,11 +206,16 @@ Tracks physical improvement. A **log** of **entries**; types: **Workout**, **Get
 - Row: Hours (whole ≥0), Minutes (whole 0–59), Distance (mi, ≥0, step 0.01). Duration saved as `hours*60+minutes` if either set, else omitted.
 
 #### `SportDetail` (golf)
-- "Type" `.choices` Practice / 9 holes / 18 holes. Row: Date + "Score (optional)" (shown only for 9/18 holes; whole number ≥1; `inputmode=numeric`).
-- Autosave (loaded once per id with `emitEvent:false`): rebuilds entry; invalid score not saved; blank date keeps saved date; score dropped when Practice/unset.
+- "Type" `.choices` 18 holes / 9 holes / Other. Row: Date + "Location" (grow, placeholder "e.g. Pine Hills", `mat-autocomplete.location-suggestions` = `matchNames(store.golfLocationsExcept(id), typed)` — all past golf locations, most used first, while blank). Then "Score (optional)" row (shown only for 9/18 holes; whole number ≥1; `inputmode=numeric`).
+- Autosave (loaded once per id with `emitEvent:false`): rebuilds entry; invalid score not saved; blank date keeps saved date; score dropped when Other/unset; blank location omitted.
+
+#### `RestDetail`
+- Row: Date. Muted `.explain`: "Recovery is part of training. A rest day keeps your streak going (and its bonus), with no XP lost. Like other entries, it counts for today or yesterday."
+- Autosave on date change (blank date not saved).
 
 #### `WeighInDetail`
 - Row: Date + Weight (lb, ≥0, step 0.1, optional until entered).
+- Auto-fill: on load (once per entry), if it has no weight, copies `lastWeighIn(date, id)`'s weight and saves it. While untouched: weight field `.auto-filled` (app yellow tint, same tokens as `ExerciseForm`) and `.autofill-note` (auto_awesome) "Filled from your last weigh-in (`EEE, MMM d`). Change it to today's weight." + Undo (blanks the weight). Any weight change ends the highlight.
 - "Entered `MMM d, y, h:mm a`" from `createdAt` (muted).
 
 #### `ExerciseForm`
@@ -300,7 +310,8 @@ Not a tab: opened from the toolbar gear.
 Game layer on top; core labels stay plain. Everything is **derived from saved data** (no stored XP): deleting a session or reopening a quest takes its XP back; no farming.
 
 #### Rules (`core/xp.ts`, pure)
-- XP: capture quest 2, complete quest 10, session (workout / Get Moving / sport) 10 once it has anything entered (workout: name or ≥1 exercise; Get Moving: location/duration/distance; sport: format picked), weigh-in 5 (once weight entered), personal record 5. No per-exercise or per-mile XP.
+- XP: capture quest 2, complete quest 10, session (workout / Get Moving / sport) 10 once it has anything entered (workout: ≥1 exercise — see `isEmptyEntry`; Get Moving: location/duration/distance; sport: format picked), weigh-in 5 (once weight entered), personal record 5. No per-exercise or per-mile XP.
+- **Rest day**: no XP of its own, no limit. If eligible (same backfill rule: `date` ≥ day logged − 1; future dates count when they arrive) its `date` is an active day: the streak grows and earns its bonus, and nothing is lost.
 - Activity day = local date of the action time (quest `createdAt`/`closedAt`, entry `createdAt`, exercise `loggedAt`). Any action makes that day active, even logging an old entry.
 - Backfill: never blocked. An entry earns XP only if its `date` ≥ (day logged − 1). A yesterday-dated entry with content also makes yesterday active (repairs streak). Older → saved, no XP, no effect on past streaks.
 - `streakBonus(n) = min(50, n(n+1)/2)` per active day (1, 3, 6, 10, 15, 21, 28, 36, 45, 50…). `DAILY_CAP = 50`.
@@ -321,7 +332,7 @@ Game layer on top; core labels stay plain. Everything is **derived from saved da
 - Card: mushroom-pixel.png `.pixel-art` (64px) + "Lv N" (pixel 20px green) + 10px XP bar + "X / Y XP to Lv N+1 · T XP total"; 3 stats: 🔥 current streak, best streak, personal records.
 - "Where your XP came from" table: one row per source with activity ("Quests captured", "Quests completed", "Sessions (workouts, Get Moving)", "Weigh-ins", "Personal records": "count × each", "+xp" green), "Streak bonuses" (+), "Missed days" (− orange `#ff8a65`), "Kept from going below 0" (+, if any); footer "Total". Empty: "No XP yet. Press Start: log something!"
 - "Last N days" (max 14, newest first): date `EEE, MMM d` | active: "🔥 S[ · +E actions] · +B streak"; missed: "Missed · −L" or "Missed · free day"; today with nothing: "Nothing yet today" | running total.
-- Collapsed "How XP works" panel: plain-language rules (values from constants).
+- Collapsed "How XP works" panel: plain-language rules (values from constants), including the Rest day rule.
 
 #### `XpFeedback` (in app root)
 - Effect compares previous `{xp, level, pr}`; skips first load. Pops (`.pop.pixel`, fixed top-right under banner, `aria-live` polite, pointer-events none): "New PR!" (yellow `#f8da92`, 2.2s), "+N XP" on increases only (green pill, 1.6s float-up/fade), "LEVEL UP! Lv N" with mushroom-pixel.png `.pixel-art` (32px, scale-in, 3.2s), "LEVEL DOWN… Lv N" (dark mirror of LEVEL UP: 13px card, bg `#690005`, text `#ffdad6`, 2px `#ff5449` border + red glow, mushroom grey + upside down; drops in, shakes, sinks; 3.2s). Reduced motion: no animation.

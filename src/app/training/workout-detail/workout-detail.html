@@ -26,7 +26,7 @@
 </mat-card>
 
 @if (lastWorkout(); as last) {
-  <mat-expansion-panel class="last-time" [expanded]="true">
+  <mat-expansion-panel class="last-time">
     <mat-expansion-panel-header>
       <mat-panel-title>Last {{ last.name }}</mat-panel-title>
       <mat-panel-description>
@@ -64,8 +64,26 @@
   </mat-expansion-panel>
 }
 
-<h3 class="section-title">Exercises</h3>
+<div class="section-head">
+  <h3 class="section-title">Exercises</h3>
+  <button matButton="outlined" type="button" class="add-exercise" (click)="newDraft(null)">
+    <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+    Add exercise
+  </button>
+</div>
 <section class="card-list exercise-list" aria-label="Exercises">
+  <!-- New exercises open at the top, right under Add exercise (newest first). -->
+  @for (d of drafts(); track d.key) {
+    <app-exercise-form
+      class="exercise-form draft"
+      [startWith]="d.name"
+      [knownNames]="exerciseNames()"
+      [previous]="latestExercise"
+      (saved)="saveDraft(d.key, $event)"
+      (cancelled)="removeDraft(d.key)"
+    />
+  }
+
   @for (e of entry().exercises; track e.id) {
     @if (isEditing(e.id)) {
       <app-exercise-form
@@ -95,17 +113,6 @@
     }
   }
 
-  @for (d of drafts(); track d.key) {
-    <app-exercise-form
-      class="exercise-form draft"
-      [startWith]="d.name"
-      [knownNames]="exerciseNames()"
-      [previous]="latestExercise"
-      (saved)="saveDraft(d.key, $event)"
-      (cancelled)="removeDraft(d.key)"
-    />
-  }
-
   @if (!entry().exercises.length && !drafts().length) {
     <p class="empty">
       No exercises yet. Press Start:
@@ -113,8 +120,3 @@
     </p>
   }
 </section>
-
-<button matButton="outlined" type="button" class="add-exercise" (click)="newDraft(null)">
-  <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
-  Add exercise
-</button>

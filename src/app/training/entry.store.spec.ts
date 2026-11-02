@@ -259,6 +259,7 @@ describe('changing entry type', () => {
       ['Get Moving', 'Bike'],
       ['Sport', 'Golf'],
       ['', 'Weigh-in'],
+      ['', 'Rest day'],
     ]);
   });
 });

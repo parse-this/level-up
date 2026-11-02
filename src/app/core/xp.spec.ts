@@ -137,7 +137,7 @@ describe('computeProgress', () => {
       date: '2026-10-01',
       createdAt: at('2026-10-02'),
       name: 'Range',
-      exercises: [],
+      exercises: [{ id: 'x', name: 'Swings', steps: [] }],
     };
     const before = computeProgress([workout], [], '2026-10-02');
     expect(before.sources.session.count).toBe(1);
@@ -174,6 +174,28 @@ describe('computeProgress', () => {
     const old = computeProgress([run('2026-10-04', '2026-09-20', 2)], quests, '2026-10-04');
     // Oct 3 missed (free), Oct 4 active again (streak 1): no run XP.
     expect(old).toMatchObject({ totalXp: 3 + 5 + 1, streak: 1, prCount: 0 });
+  });
+
+  it('a rest day counts as a streak day (bonus, no loss) but earns no XP itself', () => {
+    const rest = (loggedDay: string, date: string): Entry => ({
+      id: `e${n++}`,
+      type: 'rest',
+      date,
+      createdAt: at(loggedDay),
+    });
+    const quests = [quest('2026-10-01'), quest('2026-10-02')];
+    // Logged on Oct 4 for Oct 3 (yesterday): 2+1, 2+3, Oct 3 rest +6, Oct 4 (logging it) +10.
+    const p = computeProgress([rest('2026-10-04', '2026-10-03')], quests, '2026-10-04');
+    expect(p).toMatchObject({ totalXp: 24, streak: 4, missedLossXp: 0 });
+    expect(p.sources.session.count + p.sources.weighIn.count).toBe(0);
+
+    // Planned ahead: logged Oct 2 for Oct 3; Oct 4 is still today, so the streak is alive.
+    const planned = computeProgress([rest('2026-10-02', '2026-10-03')], quests, '2026-10-04');
+    expect(planned).toMatchObject({ totalXp: 3 + 5 + 6, streak: 3 });
+
+    // Too old to count (more than a day before it was logged): Oct 3 stays missed.
+    const late = computeProgress([rest('2026-10-05', '2026-10-03')], quests, '2026-10-05');
+    expect(late.days.find((d) => d.day === '2026-10-03')!.active).toBe(false);
   });
 
   it('awards PRs for heavier weight, or more reps at the same top weight (first time is the baseline)', () => {

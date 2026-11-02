@@ -1,11 +1,11 @@
-import type { Entry, ExerciseSet } from '../training/entry';
+import { isEmptyEntry, type Entry, type ExerciseSet } from '../training/entry';
 import type { Quest } from '../quests/quest';
 
 /** XP per action. */
 export const XP = {
   captureQuest: 2,
   completeQuest: 10,
-  /** Workout, Get Moving or sport, once anything is entered. */
+  /** Workout, Get Moving or sport, once it isn't empty (see `isEmptyEntry`). */
   session: 10,
   weighIn: 5,
   personalRecord: 5,
@@ -151,19 +151,10 @@ export function computeProgress(entries: readonly Entry[], quests: readonly Ques
   for (const entry of entries) {
     const day = localDay(entry.createdAt);
     active.add(day);
-    const hasContent = (() => {
-      switch (entry.type) {
-        case 'workout':
-          return !!entry.name || entry.exercises.length > 0;
-        case 'move':
-          return !!entry.location || entry.durationMinutes != null || entry.distance != null;
-        case 'weigh-in':
-          return entry.weight != null;
-        case 'sport':
-          return entry.format != null;
-      }
-    })();
-    if (hasContent && eligible(entry.date, day)) {
+    if (entry.type === 'rest') {
+      // A rest day counts as active (streak + bonus) for its date, but earns no XP itself.
+      if (eligible(entry.date, day)) active.add(entry.date);
+    } else if (!isEmptyEntry(entry) && eligible(entry.date, day)) {
       earn(day, entry.type === 'weigh-in' ? 'weighIn' : 'session');
       if (entry.date === addDays(day, -1)) active.add(entry.date);
     }

@@ -16,10 +16,18 @@
               icon(e)
             }}</mat-icon>
             <div class="entry-main">
-              <div class="entry-title">
-                {{ title(e) }}
-                @if (e.notes) {
-                  <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes">notes</mat-icon>
+              <div class="entry-head">
+                <div class="entry-title">
+                  {{ title(e) }}
+                  @if (e.notes) {
+                    <mat-icon class="notes-icon" fontSet="material-symbols-outlined" aria-label="Has notes">notes</mat-icon>
+                  }
+                </div>
+                @if (isEmpty(e)) {
+                  <span class="empty-badge">
+                    <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">warning</mat-icon>
+                    Empty Entry
+                  </span>
                 }
               </div>
               <div class="entry-meta">{{ meta(e) }}</div>

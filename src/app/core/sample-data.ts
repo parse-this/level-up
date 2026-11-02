@@ -98,6 +98,7 @@ export function makeSampleData(now = new Date()): Record<string, unknown> {
         sport: 'golf',
         format: round ? '18-holes' : '9-holes',
         score: round ? 96 - Math.round(progress * 6) : 47 + Math.floor(rand() * 4),
+        location: round ? 'Pine Hills Golf Club' : pick(['Riverside Municipal', 'Pine Hills Golf Club']),
         ...(round ? { notes: 'Played with friends.' } : {}),
       });
     } else {
@@ -118,8 +119,17 @@ export function makeSampleData(now = new Date()): Record<string, unknown> {
       add(n, 6, { type: 'weigh-in', weight: Math.round(weight * 10) / 10 });
     }
   }
-  // A golf entry not set up yet, to show that state.
-  add(1, 12, { type: 'sport', sport: 'golf' });
+  // One deliberate rest day (the others are just days off), to show the Rest day entry.
+  add(4, 20, { type: 'rest', notes: 'Legs sore from Leg Day. Stretched instead.' });
+
+  // A range session ("Other": no score).
+  add(1, 12, {
+    type: 'sport',
+    sport: 'golf',
+    format: 'practice',
+    location: 'Top Shot Driving Range',
+    notes: 'Worked on the driver.',
+  });
 
   // ---- Quests ----
   const tags: Tag[] = ['Home', 'Work', 'Health', 'Errands', 'Learning', 'Finance'].map((name) => ({

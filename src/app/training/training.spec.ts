@@ -113,7 +113,7 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
       store().create({ type: 'weigh-in', date: '2026-10-05' });
       vi.useRealTimers();
 
-      const { text } = await open('/training');
+      const { el, text } = await open('/training');
       expect(text('.entry-title')).toEqual(['Weigh-in', 'Weigh-in', 'Run', 'Leg day', 'Workout']);
       expect(text('.entry-meta')).toEqual([
         'Mon, Oct 5, 2026 · No weight yet',
@@ -123,6 +123,11 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         'Thu, Oct 1, 2026 · 2 exercises · 4 sets',
       ]);
       expect(text('.entry-exercises')).toEqual(['Squat, Lunge']);
+      // Empty: the weigh-in with no weight, and the workout with only a name.
+      const badges = Array.from(el().querySelectorAll('.entry')).map(
+        (row) => row.querySelector('.empty-badge')?.textContent?.replace(/\s+/g, ' ').trim() ?? null,
+      );
+      expect(badges).toEqual(['warning Empty Entry', null, null, 'warning Empty Entry', null]);
       expect(text('.entry-icon')).toEqual([
         'monitor_weight',
         'monitor_weight',
@@ -143,6 +148,7 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         'Bike',
         'Golf',
         'Weigh-in',
+        'Rest day',
       ]);
 
       items[3].click(); // Bike
@@ -150,6 +156,27 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
       const [entry] = store().entries();
       expect(entry).toMatchObject({ type: 'move', activity: 'bike' });
       expect(url()).toBe(`/training/${entry.id}`);
+    });
+
+    it('Rest day: opens a page with just the date, saves date changes, and is never an Empty Entry', async () => {
+      const { harness, el, text, click, type } = await open('/training');
+      await click('.new-entry');
+      Array.from(document.querySelectorAll<HTMLElement>('[mat-menu-item]'))
+        .find((i) => i.textContent?.includes('Rest day'))!
+        .click();
+      await harness.fixture.whenStable();
+      const [entry] = store().entries();
+      expect(entry).toMatchObject({ type: 'rest' });
+      expect(text('.entry-heading')).toEqual(['bedtime Rest day']);
+      expect(el().querySelector('app-rest-detail .explain')?.textContent).toContain('keeps your streak going');
+
+      await type('app-rest-detail [formControlName="date"]', '2026-10-20');
+      expect(store().byId(entry.id)!.date).toBe('2026-10-20');
+
+      await TestBed.inject(Router).navigateByUrl('/training');
+      await harness.fixture.whenStable();
+      expect(text('.entry-title')).toEqual(['Rest day']);
+      expect(el().querySelector('.empty-badge')).toBeNull();
     });
   });
 
@@ -234,6 +261,7 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
           ['Bike', false],
           ['Golf', false],
           ['Weigh-in', false],
+          ['Rest day', false],
         ]);
       });
 
@@ -418,7 +446,8 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         await click('.add-exercise');
         await click('.add-exercise');
         await click('[aria-label="Edit Squat"]');
-        expect(text('mat-card-title')).toEqual(['Edit exercise', 'New exercise', 'New exercise']);
+        // New forms open at the top, above the logged exercises.
+        expect(text('mat-card-title')).toEqual(['New exercise', 'New exercise', 'Edit exercise']);
 
         // Save the first new one, cancel the second, cancel the edit.
         const drafts = () => el().querySelectorAll<HTMLElement>('app-exercise-form.draft');
@@ -481,6 +510,7 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
 
           await type('[formControlName="name"]', 'push day');
           expect(text('.last-time mat-panel-title')).toEqual(['Last Push Day']);
+          expect(el().querySelector('.last-time')!.classList).not.toContain('mat-expanded'); // starts collapsed
           expect(text('.last-time mat-panel-description')).toEqual(['Tue, Oct 20 · 2 exercises']);
           expect(text('.last-time .exercise-name')).toEqual(['Bench Press', 'Dips']);
           expect(text('.last-time .exercise-steps li')).toEqual([
@@ -627,6 +657,48 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         await type('[formControlName="weight"]', '');
         expect('weight' in saved()).toBe(false);
       });
+
+      it('a new weigh-in starts from the last earlier weight (highlighted, with Undo)', async () => {
+        store().create({ type: 'weigh-in', date: '2026-10-30', weight: 999 }); // later: ignored
+        store().create({ type: 'weigh-in', date: '2026-10-20', weight: 182.4 });
+        store().create({ type: 'weigh-in', date: '2026-10-22' }); // no weight: ignored
+        store().create({ type: 'weigh-in', date: '2026-10-10', weight: 185 });
+        const i = store().create({ type: 'weigh-in', date: '2026-10-25' });
+        const { el, text, type } = await open(`/training/${i.id}`);
+        const saved = () => store().byId(i.id) as WeighInEntry;
+        const weight = () => el().querySelector<HTMLInputElement>('[formControlName="weight"]')!;
+        const highlighted = () => !!el().querySelector('.weight-field.auto-filled');
+
+        expect(weight().value).toBe('182.4');
+        expect(saved().weight).toBe(182.4);
+        expect(highlighted()).toBe(true);
+        expect(text('.autofill-note .autofill-text')[0]).toContain('Tue, Oct 20');
+
+        await type('[formControlName="weight"]', '181.8');
+        expect(saved().weight).toBe(181.8);
+        expect(highlighted()).toBe(false);
+        expect(el().querySelector('.autofill-note')).toBeNull();
+      });
+
+      it('Undo blanks a copied weight', async () => {
+        store().create({ type: 'weigh-in', date: '2026-10-20', weight: 181.8 });
+        const i = store().create({ type: 'weigh-in', date: '2026-10-26' });
+        const { el, click } = await open(`/training/${i.id}`);
+        expect(el().querySelector<HTMLInputElement>('[formControlName="weight"]')!.value).toBe('181.8');
+        await click('.undo-autofill');
+        expect('weight' in store().byId(i.id)!).toBe(false);
+        expect(el().querySelector<HTMLInputElement>('[formControlName="weight"]')!.value).toBe('');
+        expect(el().querySelector('.autofill-note')).toBeNull();
+      });
+
+      it('leaves a weigh-in blank when there is no earlier weight', async () => {
+        store().create({ type: 'weigh-in', date: '2026-10-30', weight: 180 });
+        const i = store().create({ type: 'weigh-in', date: '2026-10-25' });
+        const { el } = await open(`/training/${i.id}`);
+        expect(el().querySelector<HTMLInputElement>('[formControlName="weight"]')!.value).toBe('');
+        expect('weight' in store().byId(i.id)!).toBe(false);
+        expect(el().querySelector('.autofill-note')).toBeNull();
+      });
     });
 
     describe('golf', () => {
@@ -652,7 +724,7 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
           await stable();
         };
         expect(text('.entry-heading')).toEqual(['golf_course Golf']);
-        expect(text('mat-button-toggle')).toEqual(['Practice', '9 holes', '18 holes']);
+        expect(text('mat-button-toggle')).toEqual(['18 holes', '9 holes', 'Other']);
         expect(el().querySelector('[formControlName="score"]')).toBeNull();
 
         await pick('18 holes');
@@ -663,21 +735,43 @@ describe('Training Ground pages', { timeout: 15_000 }, () => {
         expect(saved().score).toBe(92);
         await type('[formControlName="score"]', '88');
 
-        await pick('Practice'); // no score for practice
+        await pick('Other'); // no score for Other
         expect(el().querySelector('[formControlName="score"]')).toBeNull();
         expect(saved().format).toBe('practice');
         expect('score' in saved()).toBe(false);
       });
 
+      it('saves a location and suggests past golf locations (most used first), leaving out this one', async () => {
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-20', location: 'Pine Hills' });
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-21', location: 'pine hills' });
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-22', location: 'Riverside' });
+        store().create({ type: 'move', date: '2026-10-22', activity: 'walk', location: 'Park' }); // not golf
+        const golf = store().create({ type: 'sport', sport: 'golf', date: '2026-10-25' });
+        const { type } = await open(`/training/${golf.id}`);
+        const options = () =>
+          Array.from(document.querySelectorAll('.location-suggestions mat-option')).map((o) => o.textContent?.trim());
+
+        const input = document.querySelector<HTMLInputElement>('[formControlName="location"]')!;
+        input.dispatchEvent(new Event('focusin'));
+        await type('[formControlName="location"]', '');
+        expect(options()).toEqual(['pine hills', 'Riverside']); // blank: all of them
+
+        await type('[formControlName="location"]', ' Riv ');
+        expect(options()).toEqual(['Riverside']);
+        expect((store().byId(golf.id) as SportEntry).location).toBe('Riv');
+        // This entry's own (half-typed) location isn't suggested back.
+        expect(store().golfLocationsExcept(golf.id)).toEqual(['pine hills', 'Riverside']);
+      });
+
       it('shows type and score in the log', async () => {
         store().create({ type: 'sport', sport: 'golf', date: '2026-10-25', format: '18-holes', score: 92 });
-        store().create({ type: 'sport', sport: 'golf', date: '2026-10-24', format: 'practice' });
+        store().create({ type: 'sport', sport: 'golf', date: '2026-10-24', format: 'practice', location: 'Top Shot Range' });
         store().create({ type: 'sport', sport: 'golf', date: '2026-10-23' });
         const { text } = await open('/training');
         expect(text('.entry-title')).toEqual(['Golf', 'Golf', 'Golf']);
         expect(text('.entry-meta')).toEqual([
           'Sun, Oct 25, 2026 · 18 holes · Score 92',
-          'Sat, Oct 24, 2026 · Practice',
+          'Sat, Oct 24, 2026 · Other · Top Shot Range',
           'Fri, Oct 23, 2026 · Not set up yet',
         ]);
         expect(text('.entry-icon')).toEqual(['golf_course', 'golf_course', 'golf_course']);

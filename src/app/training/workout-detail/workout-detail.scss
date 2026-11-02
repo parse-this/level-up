@@ -1,6 +1,14 @@
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .section-title {
   font: var(--mat-sys-title-large);
-  margin: 0 0 12px;
+  margin: 0;
 }
 
 .card-list {
@@ -32,7 +40,7 @@
 }
 
 .add-exercise {
-  margin-bottom: 8px;
+  margin-left: auto;
 }
 
 .empty {

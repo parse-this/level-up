@@ -1,20 +1,25 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { GOLF_FORMATS, GOLF_FORMAT_LABELS, GolfFormat, SportEntry } from '../entry';
+import { GOLF_FORMATS, GOLF_FORMAT_LABELS, GolfFormat, SportEntry, matchNames } from '../entry';
 import { EntryStore } from '../entry.store';
 
 const wholeNumber = Validators.pattern(/^\d+$/);
 
-/** Sport entry (golf): date, Practice / 9 holes / 18 holes, optional score. Saved as you go. */
+/**
+ * Sport entry (golf): 18 holes / 9 holes / Other, date, location (suggested from past golf
+ * entries), optional score. Saved as you go.
+ */
 @Component({
   selector: 'app-sport-detail',
   imports: [
     ReactiveFormsModule,
+    MatAutocompleteModule,
     MatButtonToggleModule,
     MatCardModule,
     MatFormFieldModule,
@@ -42,7 +47,25 @@ const wholeNumber = Validators.pattern(/^\d+$/);
               <input matInput type="date" formControlName="date" />
               <mat-error>Date is required.</mat-error>
             </mat-form-field>
-            @if (showScore()) {
+            <mat-form-field class="grow">
+              <mat-label>Location</mat-label>
+              <input
+                matInput
+                formControlName="location"
+                placeholder="e.g. Pine Hills"
+                autocomplete="off"
+                [matAutocomplete]="locationAuto"
+              />
+              <mat-autocomplete #locationAuto="matAutocomplete" class="location-suggestions">
+                @for (l of locationSuggestions(); track l) {
+                  <mat-option [value]="l">{{ l }}</mat-option>
+                }
+              </mat-autocomplete>
+            </mat-form-field>
+          </div>
+
+          @if (showScore()) {
+            <div class="details no-pad">
               <mat-form-field class="small-field">
                 <mat-label>Score (optional)</mat-label>
                 <input
@@ -55,8 +78,8 @@ const wholeNumber = Validators.pattern(/^\d+$/);
                 />
                 <mat-error>Whole number, 1 or more.</mat-error>
               </mat-form-field>
-            }
-          </div>
+            </div>
+          }
         </form>
       </mat-card-content>
     </mat-card>
@@ -64,6 +87,9 @@ const wholeNumber = Validators.pattern(/^\d+$/);
   styles: `
     form {
       padding-top: 16px;
+    }
+    .no-pad {
+      padding-top: 0;
     }
   `,
 })
@@ -79,13 +105,23 @@ export class SportDetail {
   protected readonly form = new FormGroup({
     format: new FormControl<GolfFormat | null>(null),
     date: new FormControl('', { nonNullable: true, validators: Validators.required }),
+    location: new FormControl('', { nonNullable: true }),
     score: new FormControl<number | null>(null, [Validators.min(1), wholeNumber]),
   });
 
   /** Selected type, as a signal (drives whether the score field shows). */
   private readonly format = signal<GolfFormat | null>(null);
 
-  /** Score only applies to a round (9 or 18 holes), not practice. */
+  private readonly locationText = toSignal(this.form.controls.location.valueChanges, {
+    initialValue: '',
+  });
+
+  /** Past golf locations matching what's typed (all of them, most used first, while blank). */
+  protected readonly locationSuggestions = computed(() =>
+    matchNames(this.store.golfLocationsExcept(this.entryId()), this.locationText()),
+  );
+
+  /** Score only applies to a round (9 or 18 holes), not Other. */
   protected readonly showScore = computed(() => {
     const f = this.format();
     return f === '9-holes' || f === '18-holes';
@@ -97,7 +133,7 @@ export class SportDetail {
       this.entryId();
       const e = untracked(this.entry);
       this.form.setValue(
-        { format: e.format ?? null, date: e.date, score: e.score ?? null },
+        { format: e.format ?? null, date: e.date, location: e.location ?? '', score: e.score ?? null },
         { emitEvent: false },
       );
       this.format.set(e.format ?? null);
@@ -115,6 +151,7 @@ export class SportDetail {
     if (this.showScore() && score.invalid) return;
     const { id, createdAt, notes, sport, date: savedDate } = this.entry();
     const keepScore = this.showScore() && score.value != null;
+    const location = this.form.controls.location.value.trim();
     // Rebuild so cleared optional fields are dropped.
     this.store.replace({
       id,
@@ -125,6 +162,7 @@ export class SportDetail {
       date: date.valid ? date.value : savedDate,
       ...(format.value ? { format: format.value } : {}),
       ...(keepScore ? { score: score.value! } : {}),
+      ...(location ? { location } : {}),
     });
   }
 }

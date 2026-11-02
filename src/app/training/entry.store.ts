@@ -7,6 +7,7 @@ import {
   ExerciseInput,
   NewEntry,
   PreviousExercise,
+  WeighInEntry,
   WorkoutEntry,
 } from './entry';
 
@@ -63,6 +64,15 @@ export class EntryStore {
     );
   }
 
+  /** Golf locations from other golf entries, ranked (most used first). Leaves out the one being edited. */
+  golfLocationsExcept(id: string): string[] {
+    return rankNames(
+      [...this.all()]
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .flatMap((e) => (e.type === 'sport' && e.id !== id && e.location ? [e.location] : [])),
+    );
+  }
+
   /** The most recent other workout with this name (trimmed, case-insensitive). */
   lastWorkoutNamed(name: string, excludeId: string): WorkoutEntry | undefined {
     const key = name.trim().toLowerCase();
@@ -70,6 +80,14 @@ export class EntryStore {
     return this.entries().find(
       (e): e is WorkoutEntry =>
         e.type === 'workout' && e.id !== excludeId && e.name?.toLowerCase() === key,
+    );
+  }
+
+  /** The most recent other weigh-in with a weight, dated on or before `date`. */
+  lastWeighIn(date: string, excludeId: string): WeighInEntry | undefined {
+    return this.entries().find(
+      (e): e is WeighInEntry =>
+        e.type === 'weigh-in' && e.id !== excludeId && e.weight != null && e.date <= date,
     );
   }
 

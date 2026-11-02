@@ -17,6 +17,7 @@ import {
   Entry,
   EntryTypeInit,
   MoveEntry,
+  RestEntry,
   SportEntry,
   WeighInEntry,
   WorkoutEntry,
@@ -31,6 +32,7 @@ import {
 import { SportDetail } from '../sport-detail/sport-detail';
 import { EntryStore } from '../entry.store';
 import { MoveDetail } from '../move-detail/move-detail';
+import { RestDetail } from '../rest-detail/rest-detail';
 import { WeighInDetail } from '../weigh-in-detail/weigh-in-detail';
 import { WorkoutDetail } from '../workout-detail/workout-detail';
 
@@ -55,6 +57,7 @@ import { WorkoutDetail } from '../workout-detail/workout-detail';
     MoveDetail,
     WeighInDetail,
     SportDetail,
+    RestDetail,
   ],
   template: `
     <div class="layout">
@@ -92,6 +95,9 @@ import { WorkoutDetail } from '../workout-detail/workout-detail';
           }
           @if (asSport(e); as s) {
             <app-sport-detail [entry]="s" />
+          }
+          @if (asRest(e); as r) {
+            <app-rest-detail [entry]="r" />
           }
 
           <mat-form-field class="entry-notes">
@@ -300,6 +306,10 @@ export class EntryDetail implements HasUnsavedChanges {
 
   protected asSport(e: Entry): SportEntry | null {
     return e.type === 'sport' ? e : null;
+  }
+
+  protected asRest(e: Entry): RestEntry | null {
+    return e.type === 'rest' ? e : null;
   }
 
   protected asWeighIn(e: Entry): WeighInEntry | null {

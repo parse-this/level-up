@@ -15,6 +15,7 @@ import {
   formatDistance,
   formatDuration,
   groupByDay,
+  isEmptyEntry,
   today,
 } from '../entry';
 import { EntryStore } from '../entry.store';
@@ -39,6 +40,7 @@ export class EntryList {
 
   protected readonly icon = entryIcon;
   protected readonly label = entryLabel;
+  protected readonly isEmpty = isEmptyEntry;
 
   /** Creates an entry of the picked type, dated today, and opens it. */
   protected newEntry(init: EntryTypeInit): void {
@@ -70,6 +72,7 @@ export class EntryList {
       case 'sport':
         parts.push(e.format ? GOLF_FORMAT_LABELS[e.format] : 'Not set up yet');
         if (e.score != null) parts.push(`Score ${e.score}`);
+        if (e.location) parts.push(e.location);
         break;
     }
     return parts.join(' · ');

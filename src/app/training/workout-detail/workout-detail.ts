@@ -124,7 +124,7 @@ export class WorkoutDetail implements HasUnsavedChanges {
 
   /** Opens a new exercise form, optionally started from a past exercise's name. */
   protected newDraft(name: string | null): void {
-    this.drafts.update((list) => [...list, { key: crypto.randomUUID(), name }]);
+    this.drafts.update((list) => [{ key: crypto.randomUUID(), name }, ...list]);
   }
 
   protected saveDraft(key: string, input: ExerciseInput): void {
