@@ -1,4 +1,4 @@
-import { isEmptyEntry, type Entry, type ExerciseSet } from '../training/entry';
+import { entryLabel, isEmptyEntry, type Entry, type ExerciseSet } from '../training/entry';
 import type { Quest } from '../quests/quest';
 
 /** XP per action. */
@@ -69,6 +69,12 @@ export function addDays(day: string, n: number): string {
 
 export type XpSource = keyof typeof XP;
 
+/** One thing done on a day, for the day's breakdown. `xp` is 0 for things that only keep the streak. */
+export interface DayItem {
+  label: string;
+  xp: number;
+}
+
 /** One day of the walk from first activity to today. */
 export interface DayLog {
   day: string;
@@ -81,8 +87,12 @@ export interface DayLog {
   loss: number;
   /** Streak after this day (0 if missed). */
   streak: number;
+  /** XP given back that day because the total can't go below 0. */
+  floor: number;
   /** Running total after this day. */
   total: number;
+  /** What was done that day, in the order counted (quests, entries, then PRs). */
+  items: DayItem[];
 }
 
 export interface Progress {
@@ -126,11 +136,17 @@ export function computeProgress(entries: readonly Entry[], quests: readonly Ques
   const sources = Object.fromEntries(
     (Object.keys(XP) as XpSource[]).map((k) => [k, { count: 0, xp: 0 }]),
   ) as Progress['sources'];
-  const earn = (day: string, source: XpSource) => {
+  const dayItems = new Map<string, DayItem[]>();
+  const note = (day: string, label: string, xp: number) => {
+    if (day > today) return;
+    dayItems.set(day, [...(dayItems.get(day) ?? []), { label, xp }]);
+  };
+  const earn = (day: string, source: XpSource, label: string) => {
     if (day > today) return;
     dayXp.set(day, (dayXp.get(day) ?? 0) + XP[source]);
     sources[source].count++;
     sources[source].xp += XP[source];
+    note(day, label, XP[source]);
   };
   /** Entry dated today or yesterday relative to the day it was logged. */
   const eligible = (date: string, actionDay: string) => date >= addDays(actionDay, -1);
@@ -139,30 +155,40 @@ export function computeProgress(entries: readonly Entry[], quests: readonly Ques
   for (const quest of quests) {
     const captured = localDay(quest.createdAt);
     active.add(captured);
-    earn(captured, 'captureQuest');
+    earn(captured, 'captureQuest', `Captured: ${quest.title}`);
     if (quest.closedAt) {
       const closed = localDay(quest.closedAt);
       active.add(closed);
-      earn(closed, 'completeQuest');
+      earn(closed, 'completeQuest', `Completed: ${quest.title}`);
     }
   }
 
-  const records: { name: string; time: string; date: string; sets: ExerciseSet[] }[] = [];
+  const records: { name: string; label: string; time: string; date: string; sets: ExerciseSet[] }[] = [];
   for (const entry of entries) {
     const day = localDay(entry.createdAt);
     active.add(day);
+    const title = (entry.type === 'workout' && entry.name) || entryLabel(entry);
     if (entry.type === 'rest') {
       // A rest day counts as active (streak + bonus) for its date, but earns no XP itself.
-      if (eligible(entry.date, day)) active.add(entry.date);
+      if (eligible(entry.date, day)) {
+        active.add(entry.date);
+        note(entry.date, 'Rest day', 0);
+      }
     } else if (!isEmptyEntry(entry) && eligible(entry.date, day)) {
-      earn(day, entry.type === 'weigh-in' ? 'weighIn' : 'session');
-      if (entry.date === addDays(day, -1)) active.add(entry.date);
+      const yesterday = entry.date === addDays(day, -1);
+      const detail = entry.type === 'weigh-in' ? ` · ${entry.weight} lb` : '';
+      earn(day, entry.type === 'weigh-in' ? 'weighIn' : 'session', title + detail + (yesterday ? ' (for yesterday)' : ''));
+      if (yesterday) {
+        active.add(entry.date);
+        note(entry.date, `${title} (logged the next day)`, 0);
+      }
     }
     if (entry.type === 'workout') {
       for (const ex of entry.exercises) {
         if (ex.loggedAt) active.add(localDay(ex.loggedAt));
         records.push({
           name: ex.name.toLowerCase(),
+          label: ex.name,
           time: ex.loggedAt ?? entry.createdAt,
           date: entry.date,
           sets: ex.steps.filter((s): s is ExerciseSet => s.type === 'set'),
@@ -187,7 +213,8 @@ export function computeProgress(entries: readonly Entry[], quests: readonly Ques
     best.set(r.name, top);
     const day = localDay(r.time);
     if (eligible(r.date, day) && day <= today) {
-      earn(day, 'personalRecord');
+      const lift = top.weight ? `${top.weight} lb × ${top.reps}` : `${top.reps} reps`;
+      earn(day, 'personalRecord', `PR: ${r.label} ${lift}`);
       prCount++;
     }
   }
@@ -217,13 +244,15 @@ export function computeProgress(entries: readonly Entry[], quests: readonly Ques
       loss = missedLoss(missed);
     }
     total += earned + bonus - loss;
+    let floor = 0;
     if (total < 0) {
-      floorXp -= total;
+      floor = -total;
+      floorXp += floor;
       total = 0;
     }
     streakBonusXp += bonus;
     missedLossXp += loss;
-    log.push({ day: d, active: active.has(d), earned, bonus, loss, streak, total });
+    log.push({ day: d, active: active.has(d), earned, bonus, loss, streak, floor, total, items: dayItems.get(d) ?? [] });
   }
 
   return {

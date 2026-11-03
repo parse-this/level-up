@@ -77,5 +77,25 @@ describe('Player status, XP feedback & Player page', () => {
     ]);
     expect(rows('.breakdown tfoot tr')).toEqual([['Total', '', '15']]);
     expect(text('.day .day-what')).toEqual(['🔥 1 · +14 actions · +1 streak']);
+
+    // Tap a day to see where its XP came from; tap again to close.
+    const row = el.querySelector<HTMLButtonElement>('.day-row')!;
+    expect(row.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.day-items')).toBeNull();
+    row.click();
+    await harness.fixture.whenStable();
+    expect(row.getAttribute('aria-expanded')).toBe('true');
+    const items = Array.from(el.querySelectorAll('.day-items li')).map((li) =>
+      Array.from(li.children).map((c) => c.textContent?.trim()).join(' '),
+    );
+    expect(items).toEqual([
+      'Captured: One +2',
+      'Completed: One +10',
+      'Captured: Two +2',
+      'Streak bonus (day 1) +1',
+    ]);
+    row.click();
+    await harness.fixture.whenStable();
+    expect(el.querySelector('.day-items')).toBeNull();
   });
 });

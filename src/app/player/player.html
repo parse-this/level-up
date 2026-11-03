@@ -84,24 +84,79 @@
   <h2 class="section-title">Last {{ recentDays().length }} {{ recentDays().length === 1 ? 'day' : 'days' }}</h2>
   <ul class="days">
     @for (d of recentDays(); track d.day) {
-      <li class="day" [class.missed]="!d.active">
-        <span class="day-date">{{ d.day | date: 'EEE, MMM d' }}</span>
-        <span class="day-what">
-          @if (d.active) {
-            🔥 {{ d.streak }}
-            @if (d.earned) {
-              · +{{ d.earned }} actions
+      @let open = openDays().has(d.day);
+      <li class="day" [class.missed]="!d.active" [class.open]="open">
+        <button
+          type="button"
+          class="day-row"
+          (click)="toggleDay(d.day)"
+          [attr.aria-expanded]="open"
+          [attr.aria-controls]="'day-' + d.day"
+        >
+          <span class="day-date">{{ d.day | date: 'EEE, MMM d' }}</span>
+          <span class="day-what">
+            @if (d.active) {
+              🔥 {{ d.streak }}
+              @if (d.earned) {
+                · +{{ d.earned }} actions
+              }
+              · +{{ d.bonus }} streak
+            } @else if (d.loss) {
+              Missed · −{{ d.loss }}
+            } @else if ($first) {
+              Nothing yet today
+            } @else {
+              Missed · free day
             }
-            · +{{ d.bonus }} streak
-          } @else if (d.loss) {
-            Missed · −{{ d.loss }}
-          } @else if ($first) {
-            Nothing yet today
-          } @else {
-            Missed · free day
-          }
-        </span>
-        <span class="day-total">{{ d.total }}</span>
+          </span>
+          <span class="day-total">{{ d.total }}</span>
+          <mat-icon class="chevron" fontSet="material-symbols-outlined" aria-hidden="true">expand_more</mat-icon>
+        </button>
+        @if (open) {
+          <ul class="day-items" [id]="'day-' + d.day" [attr.aria-label]="'XP on ' + (d.day | date: 'EEE, MMM d')">
+            @for (item of d.items; track $index) {
+              <li>
+                <span class="item-label">{{ item.label }}</span>
+                @if (item.xp) {
+                  <span class="item-xp gain">+{{ item.xp }}</span>
+                } @else {
+                  <span class="item-xp muted">keeps streak</span>
+                }
+              </li>
+            }
+            @if (d.active && !d.items.length) {
+              <li>
+                <span class="item-label">Exercises logged</span>
+                <span class="item-xp muted">keeps streak</span>
+              </li>
+            }
+            @if (d.bonus) {
+              <li>
+                <span class="item-label">Streak bonus (day {{ d.streak }})</span>
+                <span class="item-xp gain">+{{ d.bonus }}</span>
+              </li>
+            }
+            @if (d.loss) {
+              <li>
+                <span class="item-label">Missed day</span>
+                <span class="item-xp loss">−{{ d.loss }}</span>
+              </li>
+            } @else if (!d.active && !$first) {
+              <li>
+                <span class="item-label">Missed day (the first {{ freeDays }} in a row are free)</span>
+                <span class="item-xp muted">0</span>
+              </li>
+            } @else if (!d.active) {
+              <li><span class="item-label muted">Nothing yet today. Log something to keep your streak.</span></li>
+            }
+            @if (d.floor) {
+              <li>
+                <span class="item-label">Kept from going below 0</span>
+                <span class="item-xp gain">+{{ d.floor }}</span>
+              </li>
+            }
+          </ul>
+        }
       </li>
     }
   </ul>

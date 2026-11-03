@@ -142,7 +142,9 @@ describe('computeProgress', () => {
     const before = computeProgress([workout], [], '2026-10-02');
     expect(before.sources.session.count).toBe(1);
     const golf: Entry = { id: 'w', type: 'sport', sport: 'golf', format: 'practice', date: '2026-10-01', createdAt: workout.createdAt };
-    expect(computeProgress([golf], [], '2026-10-02')).toEqual(before);
+    // Same XP and days; only the breakdown labels differ ("Range" → "Golf").
+    const xpOnly = (p: ReturnType<typeof computeProgress>) => ({ ...p, days: p.days.map(({ items, ...d }) => d) });
+    expect(xpOnly(computeProgress([golf], [], '2026-10-02'))).toEqual(xpOnly(before));
 
     // Deleting and recreating it days later would lose the session XP (backdated > 1 day).
     const recreated: Entry = { ...golf, createdAt: at('2026-10-05') };
@@ -230,8 +232,48 @@ describe('computeProgress', () => {
     expect(p.totalXp).toBe(0);
     expect(4 + 10 + 5 + p.streakBonusXp - p.missedLossXp + p.floorXp).toBe(p.totalXp);
     expect(p.days).toHaveLength(10);
-    expect(p.days[0]).toEqual({ day: '2026-01-01', active: true, earned: 12, bonus: 1, loss: 0, streak: 1, total: 13 });
+    expect(p.days[0]).toEqual({
+      day: '2026-01-01',
+      active: true,
+      earned: 12,
+      bonus: 1,
+      loss: 0,
+      streak: 1,
+      floor: 0,
+      total: 13,
+      items: [
+        { label: 'Captured: x', xp: 2 },
+        { label: 'Completed: x', xp: 10 },
+      ],
+    });
     expect(p.days.at(-1)).toMatchObject({ day: '2026-01-10', active: false, loss: 0, total: 0 });
+  });
+
+  it('lists what earned XP each day (and what only kept the streak)', () => {
+    const entries: Entry[] = [
+      workout('2026-10-01', [ex('Bench', '2026-10-01', [[10, 135]])]),
+      { ...workout('2026-10-02', [ex('Bench', '2026-10-02', [[8, 145]])]), name: 'Push day' } as Entry,
+      weighIn('2026-10-02', '2026-10-02', 181.5),
+      run('2026-10-04', '2026-10-03', 3), // logged the next day
+      { id: 'r', type: 'rest', date: '2026-10-05', createdAt: at('2026-10-05') },
+    ];
+    const items = (day: string) => computeProgress(entries, [], '2026-10-05').days.find((d) => d.day === day)!.items;
+    expect(items('2026-10-01')).toEqual([{ label: 'Workout', xp: 10 }]);
+    expect(items('2026-10-02')).toEqual([
+      { label: 'Push day', xp: 10 },
+      { label: 'Weigh-in · 181.5 lb', xp: 5 },
+      { label: 'PR: Bench 145 lb × 8', xp: 5 },
+    ]);
+    expect(items('2026-10-03')).toEqual([{ label: 'Run (logged the next day)', xp: 0 }]);
+    expect(items('2026-10-04')).toEqual([{ label: 'Run (for yesterday)', xp: 10 }]);
+    expect(items('2026-10-05')).toEqual([{ label: 'Rest day', xp: 0 }]);
+  });
+
+  it('a day records XP given back by the 0 floor', () => {
+    const p = computeProgress([], [quest('2026-01-01')], '2026-01-10');
+    const floors = p.days.map((d) => d.floor);
+    expect(floors.reduce((a, b) => a + b, 0)).toBe(p.floorXp);
+    expect(p.floorXp).toBeGreaterThan(0);
   });
 
   it('closing a quest counts on the day it was closed; reopening (no closedAt) removes it', () => {
