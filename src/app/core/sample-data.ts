@@ -1,11 +1,13 @@
 import type { Entry, Exercise, Step } from '../training/entry';
 import type { Quest, Tag } from '../quests/quest';
 import { APP_KEY_PREFIX } from './app-keys';
+import { computeProgress, levelFor } from './xp';
 
 /**
  * Sample data for Simulation mode: about 4 weeks ending today (workouts, Get Moving, golf,
  * weigh-ins, quests and tags). Rest days every few days keep streak bonuses small, so the
- * player lands around level 5–6 (always below 10; see the spec test).
+ * player lands around level 5–6 (always below 10; see the spec test). Then a few extra quests top
+ * the XP up to 1–2 short of the next level, so any action (even capturing a quest) levels up.
  *
  * Returns storage key → value, like a save file's `data`. Loaded lazily (only when entering).
  */
@@ -207,6 +209,57 @@ export function makeSampleData(now = new Date()): Record<string, unknown> {
     tagIds: [T['Errands']],
     createdAt: daysAgo(0, 8, 15).toISOString(),
   });
+
+  // ---- Top up to just short of the next level ----
+  // Extra quests go on days that are already active, so streaks (and their bonuses) don't change.
+  const doneTitles = [
+    'Water the plants',
+    'Return library books',
+    'Back up phone photos',
+    'Order printer ink',
+    'Reply to the landlord',
+    'Sharpen kitchen knives',
+    'Update resume',
+    'Pay the electric bill',
+    'Donate old clothes',
+    'Clean the bathroom',
+    'Read chapter 3',
+    'Check tire pressure',
+    'Fix the squeaky door',
+    'Send thank-you note',
+    'Meal prep for the week',
+    'Vacuum the car',
+    'Change the air filter',
+    'Renew library card',
+    'Organize the desk',
+    'Book a haircut',
+  ];
+  const inboxTitles = ['Buy birthday card', 'Look up gym class times', 'Get a spare key cut', 'Find a plumber', 'Plan weekend hike'];
+  const activeDays = Array.from({ length: TOTAL }, (_, i) => i + 1).filter((n) => !restDays.has(n));
+  const today = dayStr(now);
+  const xpToGo = () => {
+    const { intoLevel, toNext } = levelFor(computeProgress(entries, quests, today).totalXp);
+    return toNext - intoLevel;
+  };
+  const extra = (title: string, horizon: Quest['horizon'], created: Date, closed?: Date): Quest => ({
+    id: crypto.randomUUID(),
+    title,
+    horizon,
+    importance: 'normal',
+    tagIds: [],
+    createdAt: created.toISOString(),
+    ...(closed ? { closedAt: closed.toISOString() } : {}),
+  });
+  for (let i = 0, toGo = xpToGo(); toGo > 2; i++, toGo = xpToGo()) {
+    if (toGo > 12 && i < doneTitles.length) {
+      // Captured and completed the same (already active) day: +12.
+      const n = activeDays[(i * 5) % activeDays.length];
+      quests.push(extra(doneTitles[i], 'now', daysAgo(n, 10, i), daysAgo(n, 19, i)));
+    } else {
+      // Captured today, still open: +2.
+      quests.push(extra(inboxTitles[i % inboxTitles.length], 'inbox', daysAgo(0, 7, i)));
+    }
+  }
 
   return {
     [`${APP_KEY_PREFIX}training.entries`]: entries,

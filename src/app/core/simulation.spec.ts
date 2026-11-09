@@ -99,9 +99,12 @@ describe('Simulation mode', () => {
         data[QUESTS] as Quest[],
         localDay(now),
       );
-      const { level } = levelFor(progress.totalXp);
+      const { level, intoLevel, toNext } = levelFor(progress.totalXp);
       expect(level).toBeLessThan(10);
       expect(level).toBeGreaterThanOrEqual(3);
+      // 1–2 XP short of the next level, so any action (even capturing a quest) levels up.
+      expect(toNext - intoLevel).toBeGreaterThanOrEqual(1);
+      expect(toNext - intoLevel).toBeLessThanOrEqual(2);
     }
   });
 });
