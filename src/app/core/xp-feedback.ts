@@ -239,8 +239,19 @@ const isLevel = (p: Pop) => p.kind === 'level-up' || p.kind === 'level-down';
         right: 8px;
       }
 
+      // Near the top on phones: the on-screen keyboard can cover the middle while typing.
+      .level-stage {
+        place-items: start center;
+        padding-top: calc(72px + env(safe-area-inset-top));
+      }
+
       .level-pop {
-        padding: 20px 24px 18px;
+        gap: 8px;
+        padding: 16px 24px 14px;
+      }
+
+      .mushroom {
+        width: 64px;
       }
     }
   `,
