@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { XpService } from './xp.service';
 
 type PopKind = 'xp' | 'pr' | 'level-up' | 'level-down';
@@ -41,9 +50,10 @@ const isLevel = (p: Pop) => p.kind === 'level-up' || p.kind === 'level-down';
     </div>
   `,
   styles: `
+    // --view-top / --view-height track the visible part of the page (see trackVisibleArea).
     .pops {
       position: fixed;
-      top: calc(72px + env(safe-area-inset-top));
+      top: calc(var(--view-top, 0px) + 72px + env(safe-area-inset-top));
       right: 16px;
       z-index: 1000;
       display: flex;
@@ -75,7 +85,10 @@ const isLevel = (p: Pop) => p.kind === 'level-up' || p.kind === 'level-down';
     // Level changes: a big banner in the middle of the screen. Taps pass straight through.
     .level-stage {
       position: fixed;
-      inset: 0;
+      top: var(--view-top, 0px);
+      left: 0;
+      right: 0;
+      height: var(--view-height, 100%);
       z-index: 1001;
       display: grid;
       place-items: center;
@@ -235,7 +248,7 @@ const isLevel = (p: Pop) => p.kind === 'level-up' || p.kind === 'level-down';
 
     @media (max-width: 599.98px) {
       .pops {
-        top: calc(64px + env(safe-area-inset-top));
+        top: calc(var(--view-top, 0px) + 64px + env(safe-area-inset-top));
         right: 8px;
       }
 
@@ -264,6 +277,7 @@ export class XpFeedback {
   private nextId = 0;
 
   constructor() {
+    this.trackVisibleArea();
     let prev: { xp: number; level: number; pr: number } | null = null;
     effect(() => {
       const now = { xp: this.xp.totalXp(), level: this.xp.level(), pr: this.xp.prCount() };
@@ -276,6 +290,28 @@ export class XpFeedback {
         if (now.level > before.level) this.show('level-up', 'LEVEL UP!', `Lv ${now.level}`);
         else if (now.level < before.level) this.show('level-down', 'LEVEL DOWN…', `Lv ${now.level}`);
       });
+    });
+  }
+
+  /**
+   * Phones keep "fixed" things pinned to the full page area, but with the keyboard up the browser
+   * scrolls the visible part down to the field being typed in, leaving the top of that area
+   * off-screen. Following the visible area keeps the pops in view.
+   */
+  private trackVisibleArea(): void {
+    const view = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!view) return;
+    const host = inject(ElementRef<HTMLElement>).nativeElement;
+    const update = () => {
+      host.style.setProperty('--view-top', `${view.offsetTop}px`);
+      host.style.setProperty('--view-height', `${view.height}px`);
+    };
+    update();
+    view.addEventListener('resize', update);
+    view.addEventListener('scroll', update);
+    inject(DestroyRef).onDestroy(() => {
+      view.removeEventListener('resize', update);
+      view.removeEventListener('scroll', update);
     });
   }
 
