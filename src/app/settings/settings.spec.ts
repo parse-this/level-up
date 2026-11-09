@@ -37,6 +37,7 @@ describe('Settings', { timeout: 15_000 }, () => {
       'Credits',
     ]);
     expect(text('nav.sections .section-description')[0]).toBe('Now: Exo 2');
+    expect(text('.version')).toEqual(['Version dev']); // the deploy stamps the commit and build time
 
     el().querySelectorAll<HTMLElement>('nav.sections .section')[4].click();
     await harness.fixture.whenStable();

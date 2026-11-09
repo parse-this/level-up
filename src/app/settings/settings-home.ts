@@ -1,6 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { BUILD_INFO } from '../core/build-info';
 import { FontStyleService } from '../core/font-style.service';
 import { SimulationService } from '../core/simulation.service';
 
@@ -14,7 +16,7 @@ interface SettingsSection {
 /** List of settings sections. */
 @Component({
   selector: 'app-settings-home',
-  imports: [RouterLink, MatIconModule],
+  imports: [DatePipe, RouterLink, MatIconModule],
   template: `
     <nav class="sections" aria-label="Settings">
       @for (s of sections(); track s.path) {
@@ -30,6 +32,12 @@ interface SettingsSection {
         </a>
       }
     </nav>
+    <p class="version">
+      Version {{ build.version }}
+      @if (build.builtAt) {
+        · built {{ build.builtAt | date: 'MMM d, y, h:mm a' }}
+      }
+    </p>
   `,
   styles: `
     .sections {
@@ -67,11 +75,18 @@ interface SettingsSection {
     .section-description {
       color: var(--mat-sys-on-surface-variant);
     }
+    .version {
+      margin: 16px 0 0;
+      text-align: center;
+      font: var(--mat-sys-body-small);
+      color: var(--mat-sys-on-surface-variant);
+    }
   `,
 })
 export class SettingsHome {
   private readonly fontStyle = inject(FontStyleService);
   private readonly simulation = inject(SimulationService);
+  protected readonly build = BUILD_INFO;
 
   protected readonly sections = computed<SettingsSection[]>(() => [
     {
