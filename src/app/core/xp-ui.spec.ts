@@ -50,7 +50,11 @@ describe('Player status, XP feedback & Player page', () => {
 
     for (let i = 0; i < 4; i++) store.close(store.add(`Quest ${i}`).id); // 4 × 12 → level 2
     await fixture.whenStable();
-    expect(pops()).toContain('LEVEL UP! Lv 2');
+    // Level changes get the big banner in the middle, not a corner pop.
+    const banner = el.querySelector('.level-pop.level-up');
+    expect(banner?.querySelector('.headline')?.textContent?.trim()).toBe('LEVEL UP!');
+    expect(banner?.querySelector('.sub')?.textContent?.trim()).toBe('Lv 2');
+    expect(pops().some((p) => p?.includes('LEVEL'))).toBe(false);
   });
 
   it('Player page shows level, streaks, where XP came from, and recent days', async () => {
